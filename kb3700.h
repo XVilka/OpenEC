@@ -157,7 +157,22 @@ SFR(B, 0xf0); // B Register
 /* 
  *  now the kb3700 specific registers
  */
+#define GPT     0xFE50
 
+SFRX(GPTCFG,  GPT+0x50);
+SFRX(GPTPF,   GPT+0x51);
+SFRX(GPT0,    GPT+0x53);
+SFRX(GPT1,    GPT+0x55);
+SFRX(GPT2H,   GPT+0x56); /* oops, the endianness used here is suboptimal for 8051 :( */
+SFRX(GPT2L,   GPT+0x57);
+SFRX(GPT3H,   GPT+0x58);
+SFRX(GPT3L,   GPT+0x59);
+
+#define EC      0xFF00
+
+SFRX( CLKCFG,  EC+0x0D);   
+ 
+    
 /* .. */
 
 #endif
