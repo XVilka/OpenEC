@@ -31,11 +31,17 @@
    xxx,                              (Software to download to target)
    xxx,                              (Hardware adapter to download to target)
    XO B2..By                         (XO Hardware version this code targets)
-   
+
    Related documentation:
    http://wiki.laptop.org/go/Category.EC
-   
-   Status: 
+
+   Publically available (but outdated) schematic:
+   http://dev.laptop.org/attachment/ticket/477/SCHEMATIC1%20_%2012%20--%20EC%20KB3700.pdf
+
+   Mailing list:
+   http://lists.laptop.org/pipermail/openec/
+
+   Status:
    very preliminary, might DAMAGE HARDWARE! (no kidding)
  */
 
@@ -93,16 +99,6 @@ bool handle_keyboard_in(void)
 {
     return 0;
 }
-
-
-//! State machine that handles input from 3x3 matrix
-/*! see wiki.laptop.org/go/EC_specification KeyCodes
- */
-bool handle_cursors(void)
-{
-    return 0;
-}
-
 
 //! Communication from/to the main processor 
 /*! Unfortunately the EC is not completely self contained. 
@@ -180,3 +176,4 @@ void main (void)
             sleep();
     }
 }
+

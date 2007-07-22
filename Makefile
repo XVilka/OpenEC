@@ -10,7 +10,8 @@ ASMS      = $(SOURCES:.c=.asm)
 SYMS      = $(SOURCES:.c=.sym)
 RSTS      = $(SOURCES:.c=.rst)
 PROJECT   = open-ec
-SOURCES   = main.c timer.c battery.c ds2756.c states.c build.c
+SOURCES   = main.c timer.c battery.c ds2756.c matrix_3x3.c states.c \
+            build.c
 
 .SUFFIXES: .rel
 

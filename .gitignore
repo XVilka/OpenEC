@@ -1,0 +1,13 @@
+*~
+*.asm
+*.bin
+*.ihx
+*.lnk
+*.lst
+*.map
+*.mem
+*.o
+*.sym
+*.rel
+*.rst
+openec.gcc
