@@ -48,6 +48,7 @@
 #include <stdbool.h>
 #include "kb3700.h"
 #include "battery.h"
+#include "matrix_3x3.h"
 #include "timer.h"
 #include "states.h"
 

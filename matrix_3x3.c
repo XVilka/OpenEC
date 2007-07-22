@@ -24,7 +24,7 @@
 #include <stdbool.h>
 #include "kb3700.h"
 #include "timer.h"
-//#include "matrix_3x3.h"
+#include "matrix_3x3.h"
 
 //! should be part of kb3700.h if verified
 /*! I don't have hardware to test on. So I instead "bend"
@@ -37,12 +37,20 @@ SFRX(GPIOD10, 0x07fe);
 SFRX(GPIOIN10, 0x07ff);
 
 
+//! keeps the externally visible data to handle the 3x3 matrix
+struct cursors __pdata cursors;
 
-//! this structure keeps the data to handle the 3x3 matrix
-struct
+//! keeps the not externally visible data to handle the 3x3 matrix
+static struct
 {
+    //! stores (low byte of) tick the scanning routine was last called
+    /*! matrix should not be scanned to quickly for two reasons:
+        debouncing, and not using more CPU cycles than needed.
+     */
     unsigned char ctick;
 
+    //! column of the matrix
+    /*! schematic names them 1..3. This variable counts 0..2 */
     unsigned char column;
 
     //! a mirror of the keyboard matrix.
@@ -53,16 +61,8 @@ struct
     /*! lower nibble holds previous reading,
         higher nibble might hold the one before */
     unsigned char row_raw[3];
+} __pdata cursors_private;
 
-    //! keycode we'd want to transmit to the host
-    unsigned char keycode[3];
-
-    //! we eventually might as well send directly.
-    /*! for now just a flag is kept here.
-        If transmitted another routine will reset this flag.
-     */
-    unsigned int keycode_updated:1;
-} __pdata cursors;
 
 
 //! Handles input from 3x3 matrix
@@ -89,10 +89,10 @@ struct
  *  This code is untested and unlikely to contain no bugs.
  *
  *  Resources:
- *  0x01xx byte code memory,
- *         bytes data memory,
+ *  0x012d byte code memory (0.45% of code memory),
+ *  0      bytes data memory,
  *  2      bytes overlayable data memory,
- *  8      bytes pdata memory,
+ *  12     bytes pdata memory,
  *  xx/yy/zz cycles (best/typ/worst case)
  *
  *  \return TRUE if a change in the matrix is detected
@@ -114,14 +114,14 @@ bool handle_cursors(void)
     const unsigned int __code keyin2_break[3] = {0xe700, 0xe0e8, 0xe0e5};
     const unsigned int __code keyin3_make[3]  = {0x6600, 0xe067, 0x6900};
     const unsigned int __code keyin3_break[3] = {0xe600, 0xe0e7, 0xe900};
-    
+
     //! columns 0,1,2 are on bit 6,7,5
     const unsigned char __code column_GPIOD10[3] = {~0x40,~0x80,~0x20};
 
     /* do not want to be called twice per tick */
-    if( cursors.ctick == (unsigned char)tick )
+    if( cursors_private.ctick == (unsigned char)tick )
         return 0;
-    cursors.ctick = (unsigned char)tick;
+    cursors_private.ctick = (unsigned char)tick;
 
     /* previous keycode still not transmitted to host? */
     if( cursors.keycode_updated )
@@ -134,7 +134,7 @@ bool handle_cursors(void)
     }
 
     /* read column number 0..2 into local variable */
-    column = cursors.column;
+    column = cursors_private.column;
 
     /* reading input, inverting, ignore Power_Button */
     in = ((unsigned char)~GPIOIN10 >> 4) & 0x07;
@@ -146,17 +146,17 @@ bool handle_cursors(void)
        Can the maximum bouncing time of the switches be specified?
      */
     in_debounced = in | 
-                   cursors.row_raw[column] | 
-                   (cursors.row_raw[column]>>4);
+                   cursors_private.row_raw[column] | 
+                   (cursors_private.row_raw[column]>>4);
     in_debounced &= 0x07;
-                   
+
     /* shift previous raw value into high nibble,
        low nibble gets the current value 
      */
-    cursors.row_raw[column] = (cursors.row_raw[column] << 4) | in;
+    cursors_private.row_raw[column] = (cursors_private.row_raw[column] << 4) | in;
 
     /* row is used often, have a local copy */
-    row = cursors.row[column];
+    row = cursors_private.row[column];
 
     /* does it differ from what has been handled so far? */
     if (row ^ in_debounced)
@@ -194,7 +194,7 @@ bool handle_cursors(void)
 
         /* write back from register to struct, 
            & 0x07 is paranoia. */
-        cursors.row[column] = row & 0x07;
+        cursors_private.row[column] = row & 0x07;
 
         /* pass data to struct for later transmission */
         cursors.keycode[0] = keycode>>8;
@@ -205,14 +205,13 @@ bool handle_cursors(void)
         cursors.keycode_updated = 1;
     }
 
-
     /* advance to next column */    
     column++;
     if(column == 3)
        column = 0;
 
     /* write local variable into struct */
-    cursors.column = column;
+    cursors_private.column = column;
 
     /* non atomic access. Unless we protect this, no IRQ might
        write to GPIOD10 */

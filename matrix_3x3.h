@@ -22,17 +22,25 @@
    what you give them.   Help stamp out software-hoarding!
 -------------------------------------------------------------------------*/
 
-extern struct
+//! keeps the externally visible data to handle the 3x3 matrix
+typedef struct cursors
 {
-    union
-    {
-           unsigned char b[2];
-           unsigned int i;
-    } keys;
-    unsigned char matrix[3];
-    unsigned char keycodes[3];
-    unsigned int keycodes_updated:1;
-} __pdata cursors;
+    //! keycode we'd want to transmit to the host
+    unsigned char keycode[3];
+
+    // unsigned int keycode_timestamp;
+
+    //! Flag for handshaking
+    /*! If there's a new keycode this flag is set.
+        If transmitted another routine will reset this flag.
+        Note, this currently is the only variable that might
+        be changed from "outside" (from a routine that is
+        not within matrix_3x3.c)
+     */
+    unsigned int keycode_updated:1;
+};
+
+extern struct cursors __pdata cursors;
 
 extern bool handle_cursors(void);
 
