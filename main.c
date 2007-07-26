@@ -143,10 +143,13 @@ void sleep(void)
 void main (void)
 {
     port_init();
-    timer_init();
     save_old_states();
+    timer_gpt3_init();
     uart0_init();
-    
+
+    /* enable interrupts. */
+    EA = 1;
+
     /* The main loop contains several state machines handling
        various subsystems on the EC.
        The idea is to have each subroutine return as quickly
@@ -167,7 +170,7 @@ void main (void)
     while(1)
     {
         STATES_TIMESTAMP();
-        
+
         busy = handle_command();
         busy |= handle_cursors();
         busy |= handle_battery();

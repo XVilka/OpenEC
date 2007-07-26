@@ -23,6 +23,7 @@
 -------------------------------------------------------------------------*/
 #include <stdbool.h>
 #include "kb3700.h"
+#include "timer.h"
 
 
 //! number of timer IRQs per second
@@ -35,7 +36,7 @@
     \see get_tick()
  */
 volatile unsigned int __pdata tick;
-volatile unsigned char __pdata tick_next_s;
+static volatile unsigned char __pdata tick_next_s;
 
 //! might as well count seconds since 01.01.1970
 /*! please no translation from/to YYYY MM DD on the EC! 
@@ -45,13 +46,28 @@ volatile unsigned char __pdata tick_next_s;
  */
 volatile unsigned long __pdata second;
 
- 
+
  //! There is no embedded device without a timer, is there?
  /*! different speed if powered down?
+     Currently using the timer with lowermost priority
+     for the timer tick IRQ
   */
-void timer_init(void)
+void timer_gpt3_init(void)
 {
-  /* which one to use? */
+    /* which one to use? */
+    GPT3H = -(SYSCLOCK/HZ>>8);
+    GPT3L = -(SYSCLOCK/HZ&0xff);
+
+    /* IRQ enable & enable. Is it true that one bit is
+       used with dual purpose? */
+    GPTCFG |= 0x08;
+
+    /* start */
+    GPTPF |= 0x80;
+
+    /* set IRQ mask */
+    P1IE |= 0x80;
+
 }
 
 //! every xx ms (HZ times per second)
@@ -70,6 +86,10 @@ void timer_init(void)
     themselves (f.e. temperature was read but
     flag for overtemperature not yet updated)).
 
+    See section  "Common interrupt pitfall" in
+    http://sdcc.sf.net/doc/sdccman.pdf for a(n inclomplete:) list
+    of what do avoid within IRQ
+
     Please do not call subroutines here (also
     make sure that f.e. no 16 bit multiply
     silently slips in).
@@ -77,8 +97,11 @@ void timer_init(void)
     whereever possible and rely on the main loop
     spinning around quickly enough.
  */
-void timer_IRQ(void) __interrupt(1)
+void timer_gpt3_interrupt(void) __interrupt(17)
 {
+    /* reset IRQ pending flag */
+    GPTPF |= 0x08; // is this the way to reset it?
+
     tick++;
 
     if( (unsigned char)tick == tick_next_s )
@@ -94,9 +117,13 @@ int get_tick(void)
 {
     unsigned int t;
 
-    EA = 0; /* should not touch EA, instead mask the timer IRQ */
+    /* mask the IRQ that changes tick */
+    P1IE &= ~0x80;
+
     t = tick;
-    EA = 1;
+
+    /* reenable the IRQ. It was enabled was it? */
+    P1IE |= 0x80;
 
     return t;
 }

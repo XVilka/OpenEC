@@ -9,7 +9,7 @@ RELS      = $(SOURCES:.c=.rel)
 ASMS      = $(SOURCES:.c=.asm)
 SYMS      = $(SOURCES:.c=.sym)
 RSTS      = $(SOURCES:.c=.rst)
-PROJECT   = open-ec
+PROJECT   = openec
 SOURCES   = main.c timer.c battery.c ds2756.c matrix_3x3.c states.c \
             build.c
 
@@ -21,8 +21,8 @@ $(PROJECT).ihx : $(RELS)
 	$(SREC_CAT) -disable_sequence_warnings \
 	             $(PROJECT).ihx -intel \
 	             -fill 0xff 0x0000 0xff00 \
-	             -fill 0x00 0xff00 0xfffe \
-	             -little_endian_checksum_negative 0xfffe 2 2 \
+	             -fill 0x00 0xff00 0xfffc \
+	             -little_endian_checksum_negative 0xfffc 4 4 \
 	             -o $(PROJECT).bin -binary
 	mv $(PROJECT).bin $(PROJECT).do_not_use.bin
 

@@ -24,10 +24,13 @@
 
 //! number of timer IRQs per second
 #define HZ (100)
+#define SYSCLOCK (32000000uL)  /* true? */
 
 extern volatile unsigned int __pdata tick;
 extern volatile unsigned long __pdata second;
 
-extern void timer_init(void);
+extern void timer_gpt3_init(void);
 
 extern int get_tick(void);
+
+extern void timer_gpt3_interrupt(void) __interrupt(17);

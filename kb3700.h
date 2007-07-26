@@ -154,25 +154,39 @@ SFR(B, 0xf0); // B Register
     SBIT(B_6, 0xf0, 6); // Register B bit 6.
     SBIT(B_7, 0xf0, 7); // Register B bit 7.
 
-/* 
- *  now the kb3700 specific registers
+
+/*
+ *  now the kb3700 specific directly addressable registers
  */
-#define GPT     0xFE50
 
-SFRX(GPTCFG,  GPT+0x50);
-SFRX(GPTPF,   GPT+0x51);
-SFRX(GPT0,    GPT+0x53);
-SFRX(GPT1,    GPT+0x55);
-SFRX(GPT2H,   GPT+0x56); /* oops, the endianness used here is suboptimal for 8051 :( */
-SFRX(GPT2L,   GPT+0x57);
-SFRX(GPT3H,   GPT+0x58);
-SFRX(GPT3L,   GPT+0x59);
+SFR(P0IE,  0x80); // P0 Interrupt Enable register
+SFR(PCON2, 0x86); // Processor Control register 2
+SFR(P1IE,  0x90); // P1 Interrupt Enable register
+SFR(SCON2, 0x9a); // Serial Port Control register 2
+SFR(SCON3, 0x9b); // Serial Port Control register 3
+SFR(P3IE,  0xb0); // P3 Interrupt Enable register
 
-#define EC      0xFF00
+SFR(P0IF,  0xd8); // P0 Interrupt Flag register
+SFR(P1IF,  0xe8); // P1 Interrupt Flag register
+SFR(P3IF,  0xf8); // P3 Interrupt Flag register
 
-SFRX( CLKCFG,  EC+0x0D);   
- 
-    
+
+/*
+ *  now the kb3700 specific xdata addressable registers
+ */
+
+SFRX(GPTCFG,  0xfe50);
+SFRX(GPTPF,   0xfe51);
+SFRX(GPT0,    0xfe53);
+SFRX(GPT1,    0xfe55);
+SFRX(GPT2H,   0xfe56); /* oops, the endianness used here is suboptimal for 8051 :( */
+SFRX(GPT2L,   0xfe57);
+SFRX(GPT3H,   0xfe58);
+SFRX(GPT3L,   0xfe59);
+
+SFRX(CLKCFG,  0xff0d);
+
+
 /* .. */
 
 #endif

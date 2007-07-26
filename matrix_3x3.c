@@ -64,6 +64,32 @@ static struct
 } __pdata cursors_private;
 
 
+#ifdef SDCC
+# pragma callee_saves debug_toggle
+#endif
+
+//! toggle pin KEY_OUT3 available at ISP header PIN 5
+void debug_toggle(void)
+{
+    #if defined(SDCC) && 1
+    __asm
+        mov   dptr,#_GPIOD10
+        movx  a,@dptr
+        push  acc      ; save previous state
+
+        setb  acc.5    ; set to high case it was low before
+        movx  @dptr,a  ; and write
+        clr   acc.5    ; clear to give a short trigger pulse
+        movx  @dptr,a  ; and write
+        setb  acc.5
+        movx  @dptr,a
+
+        pop   acc      ; restore previous state
+        movx  @dptr,a
+    __endasm;
+    #endif
+}
+
 
 //! Handles input from 3x3 matrix
 /*! see also http://wiki.laptop.org/go/Ec_specification KeyCodes
@@ -147,7 +173,7 @@ bool handle_cursors(void)
      */
     in_debounced = in | 
                    cursors_private.row_raw[column] | 
-                   (cursors_private.row_raw[column]>>4);
+                   ((cursors_private.row_raw[column]>>4)|cursors_private.row_raw[column]<<4);
     in_debounced &= 0x07;
 
     /* shift previous raw value into high nibble,
@@ -213,6 +239,9 @@ bool handle_cursors(void)
     /* write local variable into struct */
     cursors_private.column = column;
 
+    /* remove? */
+//    debug_toggle();
+
     /* non atomic access. Unless we protect this, no IRQ might
        write to GPIOD10 */
     GPIOD10 = (GPIOD10 | 0xe0) & column_GPIOD10[column];
@@ -221,26 +250,3 @@ bool handle_cursors(void)
 
 }
 
-
-
-//! toggle pin KEY_OUT3 available at ISP header PIN 5
-void debug_toggle(void)
-{
-    #if defined(SDCC) && 1
-    __asm
-        mov   dptr,#_GPIOD10
-        movx  a,@dptr
-        mov   r2,a     ; save previous state
-
-        setb  acc.5    ; set to high case it was low before
-        movx  @dptr,a  ; and write
-        clr   acc.5    ; clear to give a short trigger pulse
-        movx  @dptr,a  ; and write
-        setb  acc.5
-        movx  @dptr,a
-
-        mov   a,r2     ; restore previous state
-        movx  @dptr,a
-    __endasm;
-    #endif
-}
