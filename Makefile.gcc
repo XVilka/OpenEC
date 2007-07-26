@@ -1,0 +1,19 @@
+CC        = gcc
+CFLAGS    = -g -O0
+LFLAGS    = 
+OBJS      = $(SOURCES:.c=.o)
+LSTS      = $(SOURCES:.c=.lst)
+PROJECT   = openec.gcc
+SOURCES   = main.c timer.c battery.c ds2756.c matrix_3x3.c states.c \
+            build.c
+
+$(PROJECT): $(OBJS)
+	$(CC) $(CFLAGS) -o $(PROJECT) $(OBJS) $(LDFLAGS)
+
+%.o: %.c
+	$(CC) $(CFLAGS) -c $<
+
+clean :
+	rm -f $(ASMS) $(LSTS) $(OBJS)
+	rm -f $(PROJECT)
+
