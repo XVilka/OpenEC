@@ -1,7 +1,7 @@
 /*-------------------------------------------------------------------------
-   ds2756.c - handle Maxim/Dallas DS2756
+   watchdog.h - handle watchdog of the EC
 
-   Copyright (C) 2007  
+   Copyright (C) 2007  Frieder Ferlemann <Frieder.Ferlemann AT web.de>
 
    This program is free software; you can redistribute it and/or modify it
    under the terms of the GNU General Public License as published by the
@@ -22,13 +22,12 @@
    what you give them.   Help stamp out software-hoarding!
 -------------------------------------------------------------------------*/
 
-#include <stdbool.h>
-#include "kb3700.h"
-#include "ds2756.h"
+#define WATCHDOG_MAIN_LOOP_IS_FINE    (0x80)
+#define WATCHDOG_PS2_IS_FINE          (0x40)
+#define WATCHDOG_BATTERY_CODE_IS_FINE (0x20)
 
-//! data from battery sensor
-/*! adapt to Maxim/Dallas DS2756 */
-struct data_ds2756_type __xdata data_ds2756;
+extern unsigned char __data watchdog_all_up_and_well;
 
+void watchdog_init(void);
 
-bool handle_ds2756(void){ return 0;}
+void watchdog_interrupt(void) __interrupt(0x08);

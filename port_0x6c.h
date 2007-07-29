@@ -1,7 +1,7 @@
 /*-------------------------------------------------------------------------
-   ds2756.c - handle Maxim/Dallas DS2756
+   port_0x6c.h - host communication routines for the EC of the OLPC
 
-   Copyright (C) 2007  
+   Copyright (C) 2007  Frieder Ferlemann <Frieder.Ferlemann AT web.de>
 
    This program is free software; you can redistribute it and/or modify it
    under the terms of the GNU General Public License as published by the
@@ -22,13 +22,14 @@
    what you give them.   Help stamp out software-hoarding!
 -------------------------------------------------------------------------*/
 
-#include <stdbool.h>
-#include "kb3700.h"
-#include "ds2756.h"
+#define HOST_INTERFACE_INTERRUPT_ENABLE  do{ P0IE |=  0x20; } while(0)
+#define HOST_INTERFACE_INTERRUPT_DISABLE do{ P0IE &= ~0x20; } while(0)
 
-//! data from battery sensor
-/*! adapt to Maxim/Dallas DS2756 */
-struct data_ds2756_type __xdata data_ds2756;
+void host_interface_init(void);
 
+void host_interface_interrupt(void) __interrupt(0x0e);
 
-bool handle_ds2756(void){ return 0;}
+void respond_to_host(unsigned char my_command,
+                     unsigned char __xdata * my_transfer_ptr,
+                     unsigned char len);
+

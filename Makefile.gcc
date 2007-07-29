@@ -4,8 +4,8 @@ LFLAGS    =
 OBJS      = $(SOURCES:.c=.o)
 LSTS      = $(SOURCES:.c=.lst)
 PROJECT   = openec.gcc
-SOURCES   = main.c timer.c battery.c ds2756.c matrix_3x3.c states.c \
-            build.c
+SOURCES   = main.c battery.c ds2756.c matrix_3x3.c port_0x6c.c states.c \
+            timer.c watchdog.c build.c
 
 $(PROJECT): $(OBJS)
 	$(CC) $(CFLAGS) -o $(PROJECT) $(OBJS) $(LDFLAGS)

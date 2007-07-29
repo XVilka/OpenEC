@@ -26,15 +26,21 @@
 #include "timer.h"
 #include "matrix_3x3.h"
 
-//! should be part of kb3700.h if verified
-/*! I don't have hardware to test on. So I instead "bend"
-    the address to a harmless dummy.
-    /todo correct this fake address and move to kb3700.h
- */
-SFRX(GPIOD10, 0x07fe);
+#define UPDATE_GAME_KEY_STATUS 1
 
-/*! /todo correct this fake address and move to kb3700.h */
-SFRX(GPIOIN10, 0x07ff);
+//! bit mask for keys within game_key_status
+#define KEY_LR_R  0x02
+#define KEY_LF_R  KEY_LR_R /* naming in schematic EC KB3700 2006-12-04 and wiki differs */
+#define KEY_RT_R  0x04
+#define KEY_UP_L  0x08
+
+#define KEY_DN_L  0x10
+#define KEY_LF_L  0x20
+#define KEY_RT_L  0x40
+
+#define KEY_COLOR 0x80
+#define KEY_UP_R  0x01  /* interpret as 0x0100 */
+#define KEY_DN_R  0x02  /* interpret as 0x0200 */
 
 
 //! keeps the externally visible data to handle the 3x3 matrix
@@ -43,23 +49,26 @@ struct cursors __pdata cursors;
 //! keeps the not externally visible data to handle the 3x3 matrix
 static struct
 {
-    //! stores (low byte of) tick the scanning routine was last called
-    /*! matrix should not be scanned to quickly for two reasons:
-        debouncing, and not using more CPU cycles than needed.
+    /* stores (low byte of) tick the scanning routine was last called
+       matrix should not be scanned to quickly for two reasons:
+       debouncing, and not using more CPU cycles than needed.
      */
     unsigned char ctick;
 
-    //! column of the matrix
-    /*! schematic names them 1..3. This variable counts 0..2 */
+    /* column of the matrix
+       schematic names them 1..3. This variable counts 0..2 
+     */
     unsigned char column;
 
-    //! a mirror of the keyboard matrix.
-    /*! Not as it is but rather the state we have reacted upon */
+    /* a mirror of the keyboard matrix.
+       Not as it is but rather the state we have reacted upon 
+     */
     unsigned char row[3];
 
-    //! used for debouncing.
-    /*! lower nibble holds previous reading,
-        higher nibble might hold the one before */
+    /* used for debouncing.
+       lower nibble holds previous reading,
+       higher nibble might hold the one before 
+     */
     unsigned char row_raw[3];
 } __pdata cursors_private;
 
@@ -115,10 +124,10 @@ void debug_toggle(void)
  *  This code is untested and unlikely to contain no bugs.
  *
  *  Resources:
- *  0x012d byte code memory (0.45% of code memory),
+ *  0x01a1 byte code memory (0.6% of code memory),
  *  0      bytes data memory,
- *  2      bytes overlayable data memory,
- *  12     bytes pdata memory,
+ *  0      bytes overlayable data memory,
+ *  14     bytes pdata memory,
  *  xx/yy/zz cycles (best/typ/worst case)
  *
  *  \return TRUE if a change in the matrix is detected
@@ -218,20 +227,103 @@ bool handle_cursors(void)
                 keycode = keyin3_break[column];
         }
 
-        /* write back from register to struct, 
-           & 0x07 is paranoia. */
-        cursors_private.row[column] = row & 0x07;
+        /* & 0x07 is paranoia. */   
+        row &= 0x07;
+        /* write back from register to struct */
+        cursors_private.row[column] = row;
 
         /* pass data to struct for later transmission */
         cursors.keycode[0] = keycode>>8;
         cursors.keycode[1] = keycode;
         cursors.keycode[2] = 0x00; /* should be zero anyway, paranoia */
 
+
+#if UPDATE_GAME_KEY_STATUS
+
+        /* updating game_key_status.
+           (sending keycodes _and_ handling game_key_status) */
+        {
+            if( column == 0 )
+            {
+                /* the bit positions as transmitted by port 0x6c command 0x1d
+                   seem not a good match for the hardware. Doing a table lookup.
+                   Expect some bugs here:
+                 */
+                const unsigned char __code mask[8] =
+                {
+                                                 0,
+                                          KEY_RT_L,
+                               KEY_LF_L           ,
+                               KEY_LF_L | KEY_RT_L,
+                    KEY_DN_L                      ,
+                    KEY_DN_L |            KEY_RT_L,
+                    KEY_DN_L | KEY_LF_L           ,
+                    KEY_DN_L | KEY_LF_L | KEY_RT_L
+                };
+
+                /* using a temporary variable for the bit operations
+                   so no intermediate values for cursors.game_key_status
+                   can be seen.
+                 */
+                unsigned char tmp;
+
+                tmp = cursors.game_key_status[0];
+                tmp &= ~(KEY_RT_L | KEY_LF_L | KEY_DN_L);
+                tmp |= mask[row];
+                cursors.game_key_status[0] = tmp;
+            }
+            else if( column == 1)
+            {
+                const unsigned char __code mask[8] =
+                {
+                                                 0,
+                                          KEY_UP_L,
+                               KEY_RT_R           ,
+                               KEY_RT_R | KEY_UP_L,
+                    KEY_LF_R                      ,
+                    KEY_LF_R |            KEY_UP_L,
+                    KEY_LF_R | KEY_RT_R           ,
+                    KEY_LF_R | KEY_RT_R | KEY_UP_L
+                };
+                unsigned char tmp;
+
+                tmp = cursors.game_key_status[0];
+                tmp &= ~(KEY_UP_L | KEY_RT_R | KEY_LF_R);
+                tmp |= mask[row];
+                cursors.game_key_status[0] = tmp;
+            }
+            else
+            {
+                const unsigned char __code mask[4] =
+                {
+                                      0,
+                               KEY_DN_R,
+                    KEY_UP_R           ,
+                    KEY_UP_R | KEY_DN_R,
+                };
+                unsigned char tmp;
+
+                /* setting bit 7 accordingly */
+                tmp = cursors.game_key_status[0];
+                if(row&0x04)
+                    tmp |= KEY_COLOR;
+                else
+                    tmp &= ~KEY_COLOR;
+                cursors.game_key_status[0] = tmp;
+
+                /* setting bit 8 and bit 9 accordingly
+                  (and clearing bit 10..15) */
+                cursors.game_key_status[1] = mask[row];
+            }
+        }
+
+#endif
+
         /* News! Please transmit to host */
         cursors.keycode_updated = 1;
     }
 
-    /* advance to next column */    
+    /* advance to next column */
     column++;
     if(column == 3)
        column = 0;

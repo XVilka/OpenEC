@@ -33,6 +33,8 @@ char __code __at(0xffd0) target_string[]  = "B2";
 char __code __at(0xffe0) date_string[]    = __DATE__; /* YYYY-MM-DD would be nicer, see ISO 8601 */
 char __code __at(0xfff0) time_string[]    = __TIME__;
 
-//! set so that the 16 bit overall little endian checksum over 0x0000-0xffff is zero
-/*! see arguments to srec_cat in Makefile */
-int  __code __at(0xfffe) code_checksum;
+//! set so that the 32 bit overall little endian checksum over 0x0000-0xffff is zero
+/*! see arguments to srec_cat in Makefile. There might be another checksum
+    at 0xf3fc as addresses above 0xf400 are not mapped into code memory */
+unsigned long  __code __at(0xfffc) code_checksum;
+unsigned long  __code __at(0xf3fc) code_checksum_reserved;

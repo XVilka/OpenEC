@@ -28,6 +28,9 @@ typedef struct cursors
     //! keycode we'd want to transmit to the host
     unsigned char keycode[3];
 
+    //! 9 bits of key status as transmitted to the host
+    unsigned char game_key_status[2];
+    
     // unsigned int keycode_timestamp;
 
     //! Flag for handshaking

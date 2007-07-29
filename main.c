@@ -21,34 +21,39 @@
    You are forbidden to forbid anyone else to use, share and improve
    what you give them.   Help stamp out software-hoarding!
 -------------------------------------------------------------------------*/
+/*!
+   \mainpage
+   This is GPL'ed source code targetting the Embedded Controler of the
+   OLPC (One Laptop Per Child) Project. http://www.laptop.org
 
-/* Tools used:
-   sdcc 2.7.0, http://sdcc.sf.net    (Compiler)
-   doxygen, http://www.doxygen.org   (Source documentation tool)
-   srecord, http://srecord.sf.net    (Handling of hex (etc.) files)
-   make                              (GNU make)
-   gcc                               (Source is also compilable with GCC)
-   xxx,                              (Software to download to target)
-   xxx,                              (Hardware adapter to download to target)
-   XO B2..By                         (XO Hardware version this code targets)
+   \section Tools Tools used
+    - sdcc 2.7.0, http://sdcc.sf.net    (Compiler)
+    - doxygen, http://www.doxygen.org   (Source documentation tool)
+    - srecord, http://srecord.sf.net    (Handling of hex (etc.) files)
+    - make                              (GNU make)
+    - gcc                               (Source is also compilable with GCC)
+    - xxx                               (Software to download to target)
+    - xxx                               (Hardware adapter to download to target)
+    - XO B2..By                         (XO Hardware version this code targets)
 
-   Related documentation:
+   \section Related_Docu Related documentation
    http://wiki.laptop.org/go/Category.EC
 
    Publically available (but outdated) schematic:
    http://dev.laptop.org/attachment/ticket/477/SCHEMATIC1%20_%2012%20--%20EC%20KB3700.pdf
 
-   Mailing list:
+   \section Mailing_List Mailing list
    http://lists.laptop.org/pipermail/openec/
 
-   Status:
-   very preliminary, might DAMAGE HARDWARE! (no kidding)
+   \section Status Status
+   very preliminary, <b>might DAMAGE HARDWARE! (no kidding)</b>
  */
 
 #include <stdbool.h>
 #include "kb3700.h"
 #include "battery.h"
 #include "matrix_3x3.h"
+#include "port_0x6c.h"
 #include "timer.h"
 #include "states.h"
 
@@ -68,21 +73,12 @@ bool busy;
 bool may_sleep = 1;
 
 
-//! xx Millisecond interrupt
-/*! See section  "Common interrupt pitfall" in
-    http://sdcc.sf.net/doc/sdccman.pdf for a(n inclomplete:) list 
-    of what do avoid within IRQ
- */
-void timerx_irq(void) __interrupt (1)
-{
-}
-
 //! pre-C stuff
 /*! Code that is executed before C-startup may be placed here.
     Do not rely on initialized variables here. 
     Hmm, basically only the stack pointer has been set up. 
     This is really very early stuff and is called from here:
-    http://svn.sourceforge.net/viewvc/sdcc/trunk/sdcc/device/lib/mcs51/crtstart.asm?view=markup
+    http://sdcc.svn.sourceforge.net/viewvc/sdcc/trunk/sdcc/device/lib/mcs51/crtstart.asm?view=markup
  */ 
 unsigned char external_startup(void)
 {
@@ -132,11 +128,22 @@ void uart0_init(void)
 {
 }
 
-//! Entering low power mode
-/*! each IRQ
+//! dummy
+/*! just to have it. It is the last IRQ within the IRQ vector table 
  */
-void sleep(void)
-{}
+void adc_interrupt(void) __interrupt(0x1f)
+{
+}
+
+
+//! Entering low power mode
+/*! IRQs should wake us again
+ */
+#define SLEEP() do \
+{ \
+    PCON |= 0x01; \
+    /* maybe: PMUCFG = 0x53; */ \
+} while(0)
 
 
 //! You expected it: This routine is expected never to exit
@@ -144,6 +151,7 @@ void main (void)
 {
     port_init();
     save_old_states();
+    watchdog_init();
     timer_gpt3_init();
     uart0_init();
 
@@ -177,7 +185,7 @@ void main (void)
         handle_leds();
 
         if( !busy && may_sleep )
-            sleep();
+            SLEEP();
     }
 }
 

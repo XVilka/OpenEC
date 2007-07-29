@@ -43,6 +43,8 @@ typedef struct states_type {
      unsigned char battery;
      unsigned char keyboard;
      unsigned char touchpad;
+     unsigned char watchdog;
+     unsigned int watchdog_pc;
 };
 
 //! this variable is meant to be used for debugging purposes only

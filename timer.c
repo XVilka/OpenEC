@@ -23,6 +23,7 @@
 -------------------------------------------------------------------------*/
 #include <stdbool.h>
 #include "kb3700.h"
+#include "watchdog.h"
 #include "timer.h"
 
 
@@ -87,8 +88,8 @@ void timer_gpt3_init(void)
     flag for overtemperature not yet updated)).
 
     See section  "Common interrupt pitfall" in
-    http://sdcc.sf.net/doc/sdccman.pdf for a(n inclomplete:) list
-    of what do avoid within IRQ
+    http://sdcc.sf.net/doc/sdccman.pdf for a(n incomplete:)
+    list of what do avoid within IRQ.
 
     Please do not call subroutines here (also
     make sure that f.e. no 16 bit multiply
@@ -97,7 +98,7 @@ void timer_gpt3_init(void)
     whereever possible and rely on the main loop
     spinning around quickly enough.
  */
-void timer_gpt3_interrupt(void) __interrupt(17)
+void timer_gpt3_interrupt(void) __interrupt(0x17)
 {
     /* reset IRQ pending flag */
     GPTPF |= 0x08; // is this the way to reset it?
@@ -108,6 +109,17 @@ void timer_gpt3_interrupt(void) __interrupt(17)
     {
         tick_next_s += HZ;
         second++;
+
+        /* handle watchdog. Here? */
+        if( watchdog_all_up_and_well == (WATCHDOG_MAIN_LOOP_IS_FINE |
+                                         WATCHDOG_PS2_IS_FINE |
+                                         WATCHDOG_BATTERY_CODE_IS_FINE) )
+        {
+            /* reset pending flags */
+            WDTPF = 0x03;
+            /* reset this so subsystems have to report again */
+            watchdog_all_up_and_well = 0x00;
+        }
     }
 }
 
@@ -126,4 +138,40 @@ int get_tick(void)
     P1IE |= 0x80;
 
     return t;
+}
+
+//! savely gets the time
+unsigned long get_time(void)
+{
+    unsigned long t;
+
+    /* mask the IRQ that changes tick */
+    P1IE &= ~0x80;
+
+    t = second;
+
+    /* need subsecond resolution? */
+    //subsecond = tick_next_s - tick;
+
+    /* reenable the IRQ. It was enabled wasn't it? */
+    P1IE |= 0x80;
+
+    return t;
+}
+
+//! sets the time
+/*! calling this might upset functions using the variable second
+ */
+void set_time(unsigned long s)
+{
+    /* mask the IRQ that changes tick */
+    P1IE &= ~0x80;
+
+    second = s;
+
+    /* sync */
+    tick_next_s = tick + HZ;
+
+    /* reenable the IRQ. It was enabled wasn't it? */
+    P1IE |= 0x80;
 }

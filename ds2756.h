@@ -1,5 +1,5 @@
 /*-------------------------------------------------------------------------
-   ds2756.c - handle Maxim/Dallas DS2756
+   ds2756.h - handle Maxim/Dallas DS2756
 
    Copyright (C) 2007  
 
@@ -24,11 +24,25 @@
 
 #include <stdbool.h>
 #include "kb3700.h"
-#include "ds2756.h"
 
 //! data from battery sensor
 /*! adapt to Maxim/Dallas DS2756 */
-struct data_ds2756_type __xdata data_ds2756;
+typedef struct data_ds2756_type{
+         unsigned int voltage_raw;
+           signed int current_raw;
+         unsigned long charge_raw;
+           signed int temp_raw;
 
+         unsigned char serial_number[6];
+         unsigned int serial_number_valid:1;
 
-bool handle_ds2756(void){ return 0;}
+         unsigned char eeprom_address_from_host;
+         unsigned char eeprom_data_to_or_from_host;
+         unsigned int eeprom_host_has_a_request:1;
+         unsigned int eeprom_request_is_a_write:1;
+         unsigned int eeprom_ec_completed_request:1;
+       };
+
+extern struct data_ds2756_type __xdata data_ds2756;
+
+bool handle_ds2756(void);

@@ -39,7 +39,26 @@ extern struct {
          unsigned int may_charge:1;
          unsigned int may_trickle_charge:1;
            signed int temp_degC;
-        unsigned char bat_chemistry;
+         unsigned char bat_chemistry;
+
+         // as sent to host
+         union {
+             unsigned char b;
+             struct{
+                 unsigned int battery_exists:1;
+                 unsigned int battery_full_charged:1;
+                 unsigned int battery_low:1;
+                 unsigned int battery_destroyed:1;
+                 unsigned int AC_in:1;
+                 unsigned int reserved:3;
+             } bits;
+         } status_0x15;
+
+         // state of charge as sent to host
+         unsigned char soc_0x16;
+
+         // as sent to host
+         unsigned char errorcode_0x1f;
        } __xdata battery;
 
 

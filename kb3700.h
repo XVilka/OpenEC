@@ -22,13 +22,19 @@
    what you give them.   Help stamp out software-hoarding!
 -------------------------------------------------------------------------*/
 
+/*
+ *  See KB3700-ds-01.pdf "KB3700 Keyboard Controller Datasheet"
+ *  (Revision 0.1 July 2006)
+ *  and http://wiki.laptop.org/go/EC_Register_Settings
+ */
+
 #ifndef REG_KB3700_H
 #define REG_KB3700_H
 
 #include "compiler.h"
 
-/* 
- * 8051 registers first 
+/**
+ * 8051 registers first
  */
 
 SFR(P0, 0x80); // Port 1
@@ -155,15 +161,17 @@ SFR(B, 0xf0); // B Register
     SBIT(B_7, 0xf0, 7); // Register B bit 7.
 
 
-/*
- *  now the kb3700 specific directly addressable registers
+
+
+/**
+ * now the kb3700 specific directly addressable registers
  */
 
 SFR(P0IE,  0x80); // P0 Interrupt Enable register
 SFR(PCON2, 0x86); // Processor Control register 2
 SFR(P1IE,  0x90); // P1 Interrupt Enable register
-SFR(SCON2, 0x9a); // Serial Port Control register 2
-SFR(SCON3, 0x9b); // Serial Port Control register 3
+SFR(SCON2, 0x9a); // Serial Port Control register 2, hi byte
+SFR(SCON3, 0x9b); // Serial Port Control register 3, low byte
 SFR(P3IE,  0xb0); // P3 Interrupt Enable register
 
 SFR(P0IF,  0xd8); // P0 Interrupt Flag register
@@ -171,22 +179,198 @@ SFR(P1IF,  0xe8); // P1 Interrupt Flag register
 SFR(P3IF,  0xf8); // P3 Interrupt Flag register
 
 
-/*
- *  now the kb3700 specific xdata addressable registers
+/**
+ * now the kb3700 specific xdata addressable registers
  */
 
-SFRX(GPTCFG,  0xfe50);
-SFRX(GPTPF,   0xfe51);
-SFRX(GPT0,    0xfe53);
-SFRX(GPT1,    0xfe55);
-SFRX(GPT2H,   0xfe56); /* oops, the endianness used here is suboptimal for 8051 :( */
-SFRX(GPT2L,   0xfe57);
-SFRX(GPT3H,   0xfe58);
-SFRX(GPT3L,   0xfe59);
+/* General Purpose IO (include ADC, DAC) */
 
-SFRX(CLKCFG,  0xff0d);
+SFRX(GPIOFS00,  0xfc00);        /**< Output Function Selection */
+SFRX(GPIOFS08,  0xfc01);
+SFRX(GPIOFS10,  0xfc02);
+SFRX(GPIOFS18,  0xfc03);
 
+SFRX(GPIOOE00,  0xfc10);        /**< Output Enable */
+SFRX(GPIOOE08,  0xfc11);
+SFRX(GPIOOE10,  0xfc12);
+SFRX(GPIOOE18,  0xfc13);
+SFRX(GPIOE0E0,  0xfc14);
+SFRX(GPIOE0E8,  0xfc15);
 
-/* .. */
+SFRX(GPIOD00,   0xfc20);        /**< Data Output*/
+SFRX(GPIOD08,   0xfc21);
+SFRX(GPIOD10,   0xfc22);
+SFRX(GPIOD18,   0xfc23);
+SFRX(GPIOED0,   0xfc24);
+SFRX(GPIOED8,   0xfc25);
+
+SFRX(GPIOIN00,  0xfc30);        /**< Input Status */
+SFRX(GPIOIN08,  0xfc31);
+SFRX(GPIOIN10,  0xfc32);
+SFRX(GPIOIN18,  0xfc33);
+SFRX(GPIOEIN0,  0xfc34);
+SFRX(GPIOEIN8,  0xfc35);
+SFRX(GPIADIN,   0xfc36);
+
+SFRX(GPIOPU00,  0xfc40);        /**< Pull Up Enable */
+SFRX(GPIOPU08,  0xfc41);
+SFRX(GPIOPU10,  0xfc42);
+SFRX(GPIOPU18,  0xfc43);
+SFRX(GPIOEPU0,  0xfc44);
+SFRX(GPIOEPU8,  0xfc45);
+
+SFRX(GPIOOD00,  0xfc50);        /**< Open Drain Enable*/
+SFRX(GPIOOD08,  0xfc51);
+SFRX(GPIOOD10,  0xfc52);
+SFRX(GPIOOD18,  0xfc53);
+
+SFRX(GPIOIE00,  0xfc60);        /**< Input Enable */
+SFRX(GPIOIE08,  0xfc61);
+SFRX(GPIOIE10,  0xfc62);
+SFRX(GPIOIE18,  0xfc63);
+//SFRX(GPIOEIN0,  0xfc64);      /**< name clash within table 4.2.1 */
+//SFRX(GPIOEIN8,  0xfc65);      /**< name clash within table 4.2.1 */
+//SFRX(GPIAD0,    0xfc66);      /**< GPIADIE or GPIAD0? */
+
+SFRX(GPIOMISC,  0xfc70);
+
+/** Keyboard Controler */
+SFRX(KBCCB,     0xfc80);
+SFRX(KBCCFG,    0xfc81);
+SFRX(KBCCIF,    0xfc82);
+SFRX(KBCHWEN,   0xfc83);
+SFRX(KBCCMD,    0xfc84);
+SFRX(KBCDAT,    0xfc85);
+SFRX(KBCSTS,    0xfc86);
+
+/** Pulse Width Modulation */
+SFRX(PWMCFG,    0xfe00);
+SFRX(PWMHIGH0,  0xfe01);
+SFRX(PWMCYCL0,  0xfe02);
+SFRX(PWMHIGH1,  0xfe03);
+SFRX(PWMCYCL1,  0xfe04);
+SFRX(PWMCFG2,   0xfe05);
+SFRX(PWMCFG3,   0xfe06);
+SFRX(PWMCFG4,   0xfe07);
+SFRX(PWMHIGH2,  0xfe08);
+SFRX(PWMHIGH3,  0xfe09);
+SFRX(PWMHIGH4,  0xfe0a);
+SFRX(PWMCYC2,   0xfe0b);
+SFRX(PWMCYC3,   0xfe0c);
+SFRX(PWMCYC4,   0xfe0d);
+
+/** General Purpose Timer */
+SFRX(GPTCFG,    0xfe50);
+SFRX(GPTPF,     0xfe51);
+SFRX(GPT0,      0xfe53);
+SFRX(GPT1,      0xfe55);
+SFRX(GPT2H,     0xfe56);
+SFRX(GPT2L,     0xfe57);
+SFRX(GPT3H,     0xfe58);
+SFRX(GPT3L,     0xfe59);
+
+/** Watchdog Timer */
+SFRX(WDTCFG,    0xfe80);
+SFRX(WDTPF,     0xfe81);
+SFRX(WDTCNT,    0xfe82);
+SFRX(WDT19_12,  0xfe83);
+SFRX(WDT11_04,  0xfe84);
+SFRX(WDT03_00,  0xfe85);
+
+/** LPC Low Pin Count */
+SFRX(LPCSTAT,   0xfe90);
+SFRX(LPCSIRQ,   0xfe91);
+SFRX(LPCBAH,    0xfe92);
+SFRX(LPCBAL,    0xfe93);
+SFRX(LPCFWH,    0xfe94);
+SFRX(LPCCFG,    0xfe95);
+SFRX(LPCXBAH,   0xfe96);
+SFRX(LPCXBAL,   0xfe97);
+SFRX(LPCEBAH,   0xfe98);
+SFRX(LPCEBAL,   0xfe99);
+SFRX(LPC_2EF,   0xfe9a);
+SFRX(LPC_RSV_fe9b,      0xfe9b);
+SFRX(LPC_2F_DATA,       0xfe9c);
+SFRX(LPC68CFG,  0xfe9d);        /**< LPC 0x68/0x6c IO Configuration */
+SFRX(LPC68CSR,  0xfe9e);        /**< LPC 0x68 Command Status Register */
+SFRX(LPC68DAT,  0xfe9f);        /**< LPC 0x6c IO Data Register */
+
+/** X-Bus SPI/ISP Interface*/
+SFRX(XBISEG0,   0xfea0);
+SFRX(XBISEG1,   0xfea1);
+SFRX(XBIXIOEN,  0xfea4);
+SFRX(XBICFG,    0xfea5);
+SFRX(XBICS,     0xfea6);
+SFRX(XBIWE,     0xfea7);
+SFRX(SPIA0,     0xfea8);
+SFRX(SPIA1,     0xfea9);
+SFRX(SPIA2,     0xfeaa);
+SFRX(SPIDAT,    0xfeab);
+SFRX(SPICMD,    0xfeac);
+SFRX(SPICFG,    0xfead);
+SFRX(SPIDATR,   0xfeae);
+SFRX(SPICFG2,   0xfeaf);
+
+/** PS2 */
+SFRX(PS2CFG,    0xfee0);
+SFRX(PS2PF,     0xfee1);
+SFRX(PS2CTRL,   0xfee2);
+SFRX(PS2DATA,   0xfee3);
+SFRX(PS2CFG2,   0xfee4);
+SFRX(PS2PINS,   0xfee5);
+SFRX(PS2PINO,   0xfee6);
+
+/** Embedded Controler (hardware EC Space) */
+SFRX(ECHV,      0xff00);
+SFRX(ECFV,      0xff01);
+SFRX(ECHA,      0xff02);
+SFRX(ESCICFG,   0xff03);
+SFRX(ECCFG,     0xff04);
+SFRX(SCIE0,     0xff05);
+SFRX(SCIE1,     0xff06);
+SFRX(SCIE2,     0xff07);
+SFRX(SCIF0,     0xff08);
+SFRX(SCID,      0xff0b);
+SFRX(PMUCFG,    0xff0c);
+SFRX(CLKCFG,    0xff0d);
+SFRX(EXTIO ,    0xff0e);
+SFRX(PLLCFG,    0xff0f);
+//;
+SFRX(RSV_0xff11,0xff11);
+SFRX(CLKCFG2,   0xff12);
+SFRX(PLLCFG2,   0xff13);
+SFRX(PXCFG,     0xff14);
+SFRX(ADDAEN,    0xff15);
+SFRX(PLLFRH,    0xff16);
+SFRX(PLLFRL,    0xff17);
+SFRX(ADCTRL,    0xff18);
+SFRX(ADCDAT,    0xff19);
+SFRX(ECIF,      0xff1a);
+SFRX(ECDAT,     0xff1b);
+SFRX(ECCMD,     0xff1c);
+SFRX(ECSTS,     0xff1d);
+SFRX(PLLVAL_A,  0xff1e);
+SFRX(PLLVAL_B,  0xff1f);
+
+/** General Purpose Wake-up (hardware EC Space) */
+SFRX(GPWUEN00,  0xff30);
+SFRX(GPWUEN08,  0xff31);
+SFRX(GPWUEN10,  0xff32);
+SFRX(GPWUEN18,  0xff33);
+
+SFRX(GPWUPF00,  0xff40);
+SFRX(GPWUPF08,  0xff41);
+SFRX(GPWUPF10,  0xff42);
+SFRX(GPWUPF18,  0xff43);
+
+SFRX(GPWUPS00,  0xff50);
+SFRX(GPWUPS08,  0xff51);
+SFRX(GPWUPS10,  0xff52);
+SFRX(GPWUPS18,  0xff53);
+
+SFRX(GPWUEL00,  0xff60);
+SFRX(GPWUEL08,  0xff61);
+SFRX(GPWUEL10,  0xff62);
+SFRX(GPWUEL18,  0xff63);
 
 #endif

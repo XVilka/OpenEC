@@ -39,17 +39,22 @@
     so that the information stored here survives a reset and the
     state is still available when the EC has booted again.
 
-    Currently the equivalent of memcpy(0x0780, 0x07c0, 0x40) is
-    planned on startup so this struct will be mirrored there.
+    Currently the equivalent of:
+    memcpy(0x0780, 0x07c0, 0x40);
+    memset(0x07c0, 0x00, 0x40);
+    is done on startup so this struct will be mirrored there.
  */
 struct states_type __xdata __at (0x07c0) states;
 struct states_type __xdata __at (0x0780) old_states;
+
+#define BACKFILL (0xfe)
+
+#if defined( SDCC )
 
 //! save a copy of state machine states (and other info)
 /*! This is meant to be called once after boot. */
 void save_old_states( void )
 {
-#if defined SDCC
     __asm
         push    P2                          ; save
         ;
@@ -57,16 +62,35 @@ void save_old_states( void )
         mov     P2, #(_old_states >> 8)     ; dst, now no IRQ using pdata please!
         mov     r0, #(_old_states & 0xff)   ; dst
         mov     r1, #0x40                   ; len
+        mov     r2, #BACKFILL               ; zero (or cookie)
         ;
-    memcpy_loop:
-        movx    a, @dptr
-        inc     dptr
-        movx    @r0, a
-        inc     r0
-        djnz    r1, memcpy_loop
+    mem_copy_clear_loop:                    ; do
+        movx    a, @dptr                    ;   tmp = *src;
+        xch     a,r2
+        movx    @dptr,a                     ;   *src = BACKFILL;
+        xch     a,r2
+        inc     dptr                        ;   src++;
+        movx    @r0, a                      ;   *dst = tmp;
+        inc     r0                          ;   dst++;
+        djnz    r1, mem_copy_clear_loop     ; while(--len);
         ;
         pop     P2                          ; restore
         ;
     __endasm;
-#endif
 }
+
+#else
+
+#include <string.h>
+
+//! save a copy of state machine states (and other info)
+/*! This is meant to be called once after boot.
+    The high level version.
+ */
+void save_old_states( void )
+{
+    memcpy(&old_states, &states, sizeof states);
+    memset(&states, BACKFILL, sizeof states);
+}
+
+#endif
