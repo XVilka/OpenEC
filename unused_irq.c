@@ -1,5 +1,5 @@
 /*-------------------------------------------------------------------------
-   build.c - keeps version related info
+   unused_irq.c - safe IRQ stubs for unused IRQ
 
    Copyright (C) 2007  Frieder Ferlemann <Frieder.Ferlemann AT web.de>
 
@@ -21,20 +21,14 @@
    You are forbidden to forbid anyone else to use, share and improve
    what you give them.   Help stamp out software-hoarding!
 -------------------------------------------------------------------------*/
+
 #include "compiler.h"
+#include "kb3700.h"
 
-/* locations might be frozen in far future */
-char __code __at(0xff00) url_string[]     = "http://www.laptop.org";
+//! if this macro is defined unused_irq.h will generate the functions
+/*! (and not only the prototypes) */
+#define UNUSED_IRQ_GENERATE_FUNCTIONS
 
-char __code __at(0xffa0) name_string[]    = "openec";
-char __code __at(0xffb0) version_string[] = "0.0.1p0";
-char __code __at(0xffc0) status_string[]  = "dangerous!";
-char __code __at(0xffd0) target_string[]  = "B2";
-char __code __at(0xffe0) date_string[]    = __DATE__; /* YYYY-MM-DD would be nicer, see ISO 8601 */
-char __code __at(0xfff0) time_string[]    = __TIME__;
+#include "unused_irq.h"
 
-//! set so that the 32 bit overall little endian checksum over 0x0000-0xffff is zero
-/*! see arguments to srec_cat in Makefile. There might be another checksum
-    at 0xf3fc as addresses above 0xf400 are not mapped into code memory */
-unsigned long  __code __at(0xfffc) code_checksum;
-unsigned long  __code __at(0xf3fc) code_checksum_reserved;
+unsigned char __xdata spurious_irq[4];
