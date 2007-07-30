@@ -11,7 +11,7 @@ SYMS      = $(SOURCES:.c=.sym)
 RSTS      = $(SOURCES:.c=.rst)
 PROJECT   = openec
 SOURCES   = main.c battery.c ds2756.c matrix_3x3.c port_0x6c.c states.c \
-            timer.c watchdog.c build.c
+            timer.c unused_irq.c watchdog.c build.c
 
 .SUFFIXES: .rel
 

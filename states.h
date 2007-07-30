@@ -62,10 +62,10 @@ typedef struct states_type {
     so that the information stored here survives a reset and the
     state is still available when the EC has booted again.
 
-    Currently the equivalent of memcpy(0x0780, 0x07c0, 0x40) is
+    Currently the equivalent of memcpy(0xfb80, 0xfbc0, 0x40) is
     done on startup so this struct will be mirrored there.
  */
-extern struct states_type __xdata __at (0x07c0) states;
-extern struct states_type __xdata __at (0x0780) old_states;
+extern struct states_type __xdata __at (0xfbc0) states;
+extern struct states_type __xdata __at (0xfb80) old_states;
 
 void save_old_states( void );

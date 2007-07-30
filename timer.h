@@ -37,4 +37,4 @@ extern unsigned long get_time(void);
 
 extern void set_time(unsigned long s);
 
-extern void timer_gpt3_interrupt(void) __interrupt(17);
+extern void timer_gpt3_interrupt(void) __interrupt(0x17);

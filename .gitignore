@@ -11,3 +11,5 @@
 *.rel
 *.rst
 openec.gcc
+doc/html
+doc/latex

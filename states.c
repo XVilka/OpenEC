@@ -40,14 +40,14 @@
     state is still available when the EC has booted again.
 
     Currently the equivalent of:
-    memcpy(0x0780, 0x07c0, 0x40);
-    memset(0x07c0, 0x00, 0x40);
+    memcpy(0xfb80, 0xfbc0, 0x40);
+    memset(0xfbc0, 0x00, 0x40);
     is done on startup so this struct will be mirrored there.
  */
-struct states_type __xdata __at (0x07c0) states;
-struct states_type __xdata __at (0x0780) old_states;
+struct states_type __xdata __at (0xfbc0) states;
+struct states_type __xdata __at (0xfb80) old_states;
 
-#define BACKFILL (0xfe)
+#define BACKFILL (0xee)
 
 #if defined( SDCC )
 

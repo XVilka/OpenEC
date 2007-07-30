@@ -54,8 +54,10 @@
 #include "battery.h"
 #include "matrix_3x3.h"
 #include "port_0x6c.h"
-#include "timer.h"
 #include "states.h"
+#include "timer.h"
+#include "unused_irq.h"
+#include "watchdog.h"
 
 
 //! This is set by an interrupt routine or a state machine
@@ -127,14 +129,6 @@ void handle_leds(void)
 void uart0_init(void)
 {
 }
-
-//! dummy
-/*! just to have it. It is the last IRQ within the IRQ vector table 
- */
-void adc_interrupt(void) __interrupt(0x1f)
-{
-}
-
 
 //! Entering low power mode
 /*! IRQs should wake us again
