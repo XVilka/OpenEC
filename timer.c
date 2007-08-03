@@ -124,7 +124,7 @@ void timer_gpt3_interrupt(void) __interrupt(0x17)
 }
 
 
-//! savely gets the timer tick
+//! safely gets the timer tick
 int get_tick(void)
 {
     unsigned int t;
@@ -140,7 +140,7 @@ int get_tick(void)
     return t;
 }
 
-//! savely gets the time
+//! safely gets the time
 unsigned long get_time(void)
 {
     unsigned long t;

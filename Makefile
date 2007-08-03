@@ -9,6 +9,7 @@ RELS      = $(SOURCES:.c=.rel)
 ASMS      = $(SOURCES:.c=.asm)
 SYMS      = $(SOURCES:.c=.sym)
 RSTS      = $(SOURCES:.c=.rst)
+ADBS      = $(SOURCES:.c=.adb)
 PROJECT   = openec
 SOURCES   = main.c battery.c ds2756.c matrix_3x3.c port_0x6c.c states.c \
             timer.c unused_irq.c watchdog.c build.c
@@ -35,7 +36,7 @@ docs :
 	$(DOC) Doxyfile
 
 clean :
-	rm -f $(ASMS) $(LSTS) $(RELS) $(SYMS) $(OBJS) $(RSTS)
-	rm -f $(PROJECT).mem $(PROJECT).map $(PROJECT).lnk  \
+	rm -f $(ASMS) $(LSTS) $(RELS) $(SYMS) $(OBJS) $(RSTS) $(ADBS)
+	rm -f $(PROJECT).mem $(PROJECT).map $(PROJECT).lnk $(PROJECT).cdb \
 	      $(PROJECT).ihx $(PROJECT).hex $(PROJECT).bin  \
 	      $(PROJECT).do_not_use.bin

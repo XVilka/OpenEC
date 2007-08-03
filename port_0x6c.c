@@ -27,6 +27,7 @@
 #include "ds2756.h"
 #include "matrix_3x3.h"
 #include "port_0x6c.h"
+#include "states.h"
 #include "timer.h"
 
 #define IBF 0x02
@@ -146,6 +147,9 @@ void host_interface_interrupt(void) __interrupt(0x0e)
          */
         command = LPC68DAT;
         LPC68CSR = 0x02; /* does the host notice this or the reading of LPC68DAT? */
+
+        /* write new input to the debugging area (if enabled) */
+        STATES_UPDATE(command, command);
 
         switch( command )
         {
@@ -405,7 +409,7 @@ void respond_to_host(unsigned char my_command,
 
 
 #if 0
- Cut'n paste from:
+ Cut and paste from:
  http://wiki.laptop.org/go/Revised_EC_Port_6C_Command_Protocol
 
  C1: CPU waits until IBF=0, then sends the command by writing it to port 0x6c.

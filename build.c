@@ -23,13 +23,34 @@
 -------------------------------------------------------------------------*/
 #include "compiler.h"
 
+
+#define PATCHLEVEL "p0"
+
+
+#ifdef SDCC
+# if (SDCC <270)
+#  warning please use SDCC 2.7.0 and up
+# else
+#  define COMPILER_VERSION {'0' + SDCC / 100, \
+                            '.', \
+                            '0' + SDCC % 100 / 10, \
+                            '.', \
+                            '0' + SDCC % 10, \
+                            0x00 }
+# endif
+#else
+#  define COMPILER_VERSION "?.?.?"
+#endif
+
+
 /* locations might be frozen in far future */
 char __code __at(0xff00) url_string[]     = "http://www.laptop.org";
 
-char __code __at(0xffa0) name_string[]    = "openec";
-char __code __at(0xffb0) version_string[] = "0.0.1p0";
+char __code __at(0xff90) name_string[]    = "openec";
+char __code __at(0xffa0) version_string[] = "0.0.1" PATCHLEVEL;
+char __code __at(0xffb0) compiler_version[] = COMPILER_VERSION;
 char __code __at(0xffc0) status_string[]  = "dangerous!";
-char __code __at(0xffd0) target_string[]  = "B2";
+char __code __at(0xffd0) target_string[]  = "Bx-By";
 char __code __at(0xffe0) date_string[]    = __DATE__; /* YYYY-MM-DD would be nicer, see ISO 8601 */
 char __code __at(0xfff0) time_string[]    = __TIME__;
 

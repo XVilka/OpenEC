@@ -81,6 +81,8 @@ SFR(TL0, 0x8a); // Timer 0 LSB.
 SFR(TL1, 0x8b); // Timer 1 LSB.
 SFR(TH0, 0x8c); // Timer 0 MSB.
 SFR(TH1, 0x8d); // Timer 1 MSB.
+SFR16E(TMR0, 0x8C8A); // Timer 0. 16 bit access.
+SFR16E(TMR1, 0x8D8B); // Timer 1. 16 bit access.
 
 SFR(P1, 0x90); // Port 1
     SBIT(P1_0, 0x90, 0);

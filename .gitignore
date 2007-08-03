@@ -1,6 +1,8 @@
 *~
+*.adb
 *.asm
 *.bin
+*.cdb
 *.ihx
 *.lnk
 *.lst
@@ -10,6 +12,7 @@
 *.sym
 *.rel
 *.rst
+openec
 openec.gcc
 doc/html
 doc/latex

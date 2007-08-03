@@ -23,6 +23,7 @@
 -------------------------------------------------------------------------*/
 #include <stdbool.h>
 #include "kb3700.h"
+#include "states.h"
 #include "timer.h"
 #include "matrix_3x3.h"
 
@@ -171,7 +172,17 @@ bool handle_cursors(void)
     /* read column number 0..2 into local variable */
     column = cursors_private.column;
 
-    /* reading input, inverting, ignore Power_Button */
+    /* reading input, inverting, ignore Power_Button
+       Note: this read would not need be valid if done
+       immediately after selecting a new scan column.
+       If previously held low the capacity of the scan
+       lines (xxx pF?) needs to be charged via a
+       10k pullup resistor so a time constant in the 
+       order of microseconds is expected.
+       (Will not be critical here but nevertheless:
+       can someone send an oscillocope screenshot
+       and/or measure capacity of KEY_IN_1..3?)
+     */
     in = ((unsigned char)~GPIOIN10 >> 4) & 0x07;
 
     /* do some debouncing.
@@ -330,6 +341,9 @@ bool handle_cursors(void)
 
     /* write local variable into struct */
     cursors_private.column = column;
+
+    /* and to debugging area (if enabled) */
+    STATES_UPDATE(matrix_3x3, column | (cursors.keycode_updated?0x80:0x00));
 
     /* remove? */
 //    debug_toggle();

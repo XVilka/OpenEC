@@ -26,7 +26,7 @@
 #define DEBUG_STATES (1)
 
 #if DEBUG_STATES
-# define STATES_UPDATE(x,y) do{states.x = y;}while(0)
+# define STATES_UPDATE(x,y) do{states.x = (y);}while(0)
 # define STATES_TIMESTAMP() do{states.last_timestamp=states.timestamp; \
                                states.timestamp=get_tick(); \
                                states.number++; \
@@ -40,7 +40,10 @@ typedef struct states_type {
      unsigned int timestamp;
      unsigned int last_timestamp; /* can be used to detect busy waiting:^) */
      unsigned int number;
+     unsigned char command;
+     unsigned char matrix_3x3;
      unsigned char battery;
+     unsigned char ds2756;
      unsigned char keyboard;
      unsigned char touchpad;
      unsigned char watchdog;
