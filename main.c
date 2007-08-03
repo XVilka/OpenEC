@@ -84,7 +84,7 @@ bool may_sleep = 1;
     This is really very early stuff and is called from here:
     http://sdcc.svn.sourceforge.net/viewvc/sdcc/trunk/sdcc/device/lib/mcs51/crtstart.asm?view=markup
  */ 
-unsigned char external_startup(void)
+unsigned char _sdcc_external_startup(void)
 {
     /* the code here is meant be able to put the EC into a safe
        recovery mode that allows linux/BIOS to reflash EC code
@@ -106,6 +106,9 @@ unsigned char external_startup(void)
        setting up GPIO so we can detect key presses
      */
 
+    /* set KEY_OUT_1 KEY_OUT_2, KEY_OUT_3 Open Drain Enable? */
+    GPIOOD10 |= 0x70;
+
     /* set KEY_OUT_1 to output */
     GPIOOE10 |= 0x40;
 
@@ -118,7 +121,7 @@ unsigned char external_startup(void)
        Which one to use best? */
     GPIOD10 &= ~0x40;
 
-    /* drive KEY_OUT_2, KEY_OUT_3 high */
+    /* let KEY_OUT_2, KEY_OUT_3 be high */
     GPIOD10 |= (0x80 | 0x20);
 
     /* enable input for KEY_IN_1 .. KEY_IN_3 */

@@ -1,6 +1,7 @@
 CC        = sdcc
 DOC       = doxygen
 SREC_CAT  = srec_cat
+D52       = d52
 CFLAGS    = --main-return
 LFLAGS    = --xram-loc 0xf400 --xram-size 2048 --iram-size 128 --code-size 0xf400
 OBJS      = $(SOURCES:.c=.o)
@@ -25,6 +26,9 @@ $(PROJECT).ihx : $(RELS)
 	             -fill 0x00 0xf400 0xfffc \
 	             -little_endian_checksum_negative 0xfffc 4 4 \
 	             -o $(PROJECT).bin -binary
+	if test "x`which $(D52) 2>/dev/null`" != "x" ; then $(D52) -P -N -D -b $(PROJECT).bin ; fi;
+#	if test -n $(D52) ;  then $(D52) -P -N -D -b $(PROJECT).bin ; \
+#	                     else echo "Warning $(D52) not found." ; fi;
 	mv $(PROJECT).bin $(PROJECT).do_not_use.bin
 
 .c.rel :
@@ -38,5 +42,5 @@ docs :
 clean :
 	rm -f $(ASMS) $(LSTS) $(RELS) $(SYMS) $(OBJS) $(RSTS) $(ADBS)
 	rm -f $(PROJECT).mem $(PROJECT).map $(PROJECT).lnk $(PROJECT).cdb \
-	      $(PROJECT).ihx $(PROJECT).hex $(PROJECT).bin  \
+	      $(PROJECT).ihx $(PROJECT).hex $(PROJECT).bin $(PROJECT).d52 \
 	      $(PROJECT).do_not_use.bin

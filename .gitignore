@@ -14,5 +14,6 @@
 *.rst
 openec
 openec.gcc
+openec.d52
 doc/html
 doc/latex
