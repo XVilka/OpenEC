@@ -42,6 +42,13 @@
 #  define COMPILER_VERSION "?.?.?"
 #endif
 
+/* these cookies are temporarily here.
+   Used for checking bankswitching */
+char __code __at(0x4000) cookie_1 = 0x01;
+char __code __at(0x8000) cookie_2 = 0x02;
+char __code __at(0xc000) cookie_3 = 0x03;
+
+
 
 /* locations might be frozen in far future */
 char __code __at(0xff00) url_string[]     = "http://www.laptop.org";

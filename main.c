@@ -83,7 +83,7 @@ bool may_sleep = 1;
     Hmm, basically only the stack pointer has been set up. 
     This is really very early stuff and is called from here:
     http://sdcc.svn.sourceforge.net/viewvc/sdcc/trunk/sdcc/device/lib/mcs51/crtstart.asm?view=markup
- */ 
+ */
 unsigned char _sdcc_external_startup(void)
 {
     /* the code here is meant be able to put the EC into a safe
@@ -96,79 +96,6 @@ unsigned char _sdcc_external_startup(void)
     // watchdog?
     // ports to HiZ?
     // kick PLL?
-
-
-    /* The recovery mode does not want to be running on battery */
-    if( 0 /* running from battery */ )
-        return 0;
-
-    /*
-       setting up GPIO so we can detect key presses
-     */
-
-    /* set KEY_OUT_1 KEY_OUT_2, KEY_OUT_3 Open Drain Enable? */
-    GPIOOD10 |= 0x70;
-
-    /* set KEY_OUT_1 to output */
-    GPIOOE10 |= 0x40;
-
-    /* make sure KEY_IN_1 .. KEY_IN_3 are inputs */
-    GPIOOE00 &= ~0x70;
-
-    /* drive KEY_OUT_1 low. Eventually not a good idea
-       to use this column of the matrix because its
-       full name is KEY_OUT_1/ISP_EN# 
-       Which one to use best? */
-    GPIOD10 &= ~0x40;
-
-    /* let KEY_OUT_2, KEY_OUT_3 be high */
-    GPIOD10 |= (0x80 | 0x20);
-
-    /* enable input for KEY_IN_1 .. KEY_IN_3 */
-    /* Seems we have a problem here:
-       http://wiki.laptop.org/go/EC_Register_Settings#OFW_Dump
-       lists 0x99 as the value for GPIOIE00
-       I would have expected bits 6,5,4 to be set.
-       Which means that the register probably does not
-       do what it is expected to.
-       Also there seems to be a name clash in table 4.2.1:
-       GPIOEIN0 is used for 0xfc64 and 0xfc34.
-     */
-    // GPIOIE00 |= 0x70;
-
-
-    /* short delay to allow capacity of keyboard scan
-       lines to be discharged. Probably not needed.
-     */
-    {
-        volatile char counter = 10;
-        do
-           {}
-        while(--counter);
-    }
-
-
-    /* now checking for if KEY_RT_L, KEY_LF_L and KEY_DN_L
-       are simultanuously pressed. */
-    if( 0x00 == (GPIOIN10 & 0x70))
-    {
-        /* switch on DCON, WLAN, POWER, LED */
-
-        /* switch all IO ports to failsafe state */
-
-        /* going into an (endless!?) loop waiting
-           for the XO giving us a reset? */
-        while (1  /* && !running from battery */)
-        {
-            /* reset watchdog pending flags */
-            WDTPF = 0x03;
-
-            /* signal to the host and user that
-               we are here and are alive */
-        }
-
-        /* switch LED */
-    };
 
     return 0;
 }
@@ -265,4 +192,5 @@ void main (void)
             SLEEP();
     }
 }
+
 

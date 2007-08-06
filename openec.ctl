@@ -7,8 +7,26 @@
 ; KB3700 Keyboard Controller Datasheet Revision 0.1
 ;
 
-Z 0-FFFF
-T FF00-FFFF
+Z 0-F3FF
+T FF00-FFFC
+B FFFC-FFFF
+
+# f400
+# f400 Embedded SRAM 0xf400..0xfbff (xdata memory)
+# f400
+
+# fc00
+# fc00 Special Function Registers 0xfc00..0xffff (xdata memory)
+# fc00
+
+# ff00
+# ff00 Build Strings (code memory)
+# ff00
+
+# fffc
+# fffc Checksum (code memory)
+# fffc
+
 ;
 ; directly addressable Special Function Registers
 ;
@@ -223,9 +241,9 @@ l 0b irq_tf0
 l 13 irq_ext1
 l 1b irq_tf1
 l 23 irq_ser
-l 2b irq_na_2b;
-l 33 irq_na_33;
-l 3b irq_na_3b;
+l 2b irq_na_2b
+l 33 irq_na_33
+l 3b irq_na_3b
 l 43 irq_wdt
 l 4b irq_na_4b
 l 53 irq_ps2

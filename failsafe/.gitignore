@@ -1,0 +1,16 @@
+*~
+*.adb
+*.asm
+*.bin
+*.cdb
+*.d52
+*.ihx
+*.lnk
+*.lst
+*.map
+*.mem
+*.sym
+*.rel
+*.rst
+doc/html
+doc/latex
