@@ -13,7 +13,7 @@ RSTS      = $(SOURCES:.c=.rst)
 ADBS      = $(SOURCES:.c=.adb)
 PROJECT   = openec
 SOURCES   = main.c fs_entry.c battery.c ds2756.c matrix_3x3.c port_0x6c.c states.c \
-            timer.c unused_irq.c watchdog.c build.c
+            timer.c uart.c unused_irq.c watchdog.c build.c
 
 .SUFFIXES: .rel
 
@@ -26,7 +26,7 @@ $(PROJECT).ihx : $(RELS)
 	             -fill 0x00 0xf400 0xfffc \
 	             -little_endian_checksum_negative 0xfffc 4 4 \
 	             -o $(PROJECT).bin -binary
-	if test "x`which $(D52) 2>/dev/null`" != "x" ; then $(D52) -P -N -D -b $(PROJECT).bin ; fi;
+	if test "x`which $(D52) 2>/dev/null`" != "x" ; then $(D52) -p -n -d -b $(PROJECT).bin ; fi;
 	mv $(PROJECT).bin $(PROJECT).do_not_use.bin
 
 .c.rel :

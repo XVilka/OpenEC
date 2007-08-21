@@ -48,7 +48,7 @@ void watchdog_init(void)
     WDTPF = 0x03;
 
     /* disable watchdog for now */
-    WDTCFG = 0x4c;
+    WDTCFG = 0x48;
 
     /* time in units of 64 ms until IRQ occurs. */
     WDTCNT = 32;

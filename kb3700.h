@@ -196,8 +196,8 @@ SFRX(GPIOOE00,  0xfc10);        /**< Output Enable */
 SFRX(GPIOOE08,  0xfc11);
 SFRX(GPIOOE10,  0xfc12);
 SFRX(GPIOOE18,  0xfc13);
-SFRX(GPIOE0E0,  0xfc14);
-SFRX(GPIOE0E8,  0xfc15);
+SFRX(GPIOEOE0,  0xfc14);
+SFRX(GPIOEOE8,  0xfc15);
 
 SFRX(GPIOD00,   0xfc20);        /**< Data Output*/
 SFRX(GPIOD08,   0xfc21);
@@ -280,38 +280,40 @@ SFRX(WDT11_04,  0xfe84);
 SFRX(WDT03_00,  0xfe85);
 
 /** LPC Low Pin Count */
-SFRX(LPCSTAT,   0xfe90);
-SFRX(LPCSIRQ,   0xfe91);
-SFRX(LPCBAH,    0xfe92);
+SFRX(LPCSTAT,   0xfe90);        /**< LPC Status (Internal Use Only) */
+SFRX(LPCSIRQ,   0xfe91);        /**< LPC SIRQ Configuration */
+SFRX(LPCBAH,    0xfe92);        /**< LPC Index IO Base Address */
 SFRX(LPCBAL,    0xfe93);
-SFRX(LPCFWH,    0xfe94);
-SFRX(LPCCFG,    0xfe95);
-SFRX(LPCXBAH,   0xfe96);
+SFRX(LPCFWH,    0xfe94);        /**< LPC FWH Configuration */
+SFRX(LPCCFG,    0xfe95);        /**< LPC Configuration */
+SFRX(LPCXBAH,   0xfe96);        /**< LPC Extended IO Base Address */
 SFRX(LPCXBAL,   0xfe97);
-SFRX(LPCEBAH,   0xfe98);
+SFRX(LPCEBAH,   0xfe98);        /**< LPC EC Base Address */
 SFRX(LPCEBAL,   0xfe99);
-SFRX(LPC_2EF,   0xfe9a);
+SFRX(LPC_2EF,   0xfe9a);        /**< Address 2EF decoding and control in LPC */
 SFRX(LPC_RSV_fe9b,      0xfe9b);
-SFRX(LPC_2F_DATA,       0xfe9c);
+SFRX(LPC_2F_DATA,       0xfe9c); /**< LPC_2F_DATA */
 SFRX(LPC68CFG,  0xfe9d);        /**< LPC 0x68/0x6c IO Configuration */
 SFRX(LPC68CSR,  0xfe9e);        /**< LPC 0x68 Command Status Register */
 SFRX(LPC68DAT,  0xfe9f);        /**< LPC 0x6c IO Data Register */
 
 /** X-Bus SPI/ISP Interface*/
-SFRX(XBISEG0,   0xfea0);
-SFRX(XBISEG1,   0xfea1);
-SFRX(XBIXIOEN,  0xfea4);
-SFRX(XBICFG,    0xfea5);
-SFRX(XBICS,     0xfea6);
-SFRX(XBIWE,     0xfea7);
-SFRX(SPIA0,     0xfea8);
-SFRX(SPIA1,     0xfea9);
-SFRX(SPIA2,     0xfeaa);
-SFRX(SPIDAT,    0xfeab);
-SFRX(SPICMD,    0xfeac);
-SFRX(SPICFG,    0xfead);
-SFRX(SPIDATR,   0xfeae);
-SFRX(SPICFG2,   0xfeaf);
+SFRX(XBISEG0,   0xfea0);        /**< Address Segment 0 Mapping Configuration */
+SFRX(XBISEG1,   0xfea1);        /**< Address Segment 1 Mapping Configuration */
+SFRX(XBISEG2,   0xfea2);        /**< unconfirmed */
+SFRX(XBISEG3,   0xfea3);        /**< unconfirmed */
+SFRX(XBIXIOEN,  0xfea4);        /**< XIO Enable */
+SFRX(XBICFG,    0xfea5);        /**< XBI Configuration */
+SFRX(XBICS,     0xfea6);        /**< XBI E51CS# Configuration */
+SFRX(XBIWE,     0xfea7);        /**< XBI Write Enable */
+SFRX(SPIA0,     0xfea8);        /**< XBI SPI Flash Address A7~A0 */
+SFRX(SPIA1,     0xfea9);        /**< XBI SPI Flash Address A15~A8 */
+SFRX(SPIA2,     0xfeaa);        /**< XBI SPI Flash Address A22~A16 */
+SFRX(SPIDAT,    0xfeab);        /**< XBI SPI Flash Output/Input Data */
+SFRX(SPICMD,    0xfeac);        /**< XBI SPI Flash Command */
+SFRX(SPICFG,    0xfead);        /**< SPI Flash Configuration/Status */
+SFRX(SPIDATR,   0xfeae);        /**< SPI Flash Output Data for Read Compare */
+SFRX(SPICFG2,   0xfeaf);        /**< SPI Flash Configuration 2 */
 
 /** PS2 */
 SFRX(PS2CFG,    0xfee0);
@@ -323,20 +325,22 @@ SFRX(PS2PINS,   0xfee5);
 SFRX(PS2PINO,   0xfee6);
 
 /** Embedded Controler (hardware EC Space) */
-SFRX(ECHV,      0xff00);
-SFRX(ECFV,      0xff01);
-SFRX(ECHA,      0xff02);
-SFRX(ESCICFG,   0xff03);
-SFRX(ECCFG,     0xff04);
-SFRX(SCIE0,     0xff05);
-SFRX(SCIE1,     0xff06);
-SFRX(SCIE2,     0xff07);
-SFRX(SCIF0,     0xff08);
-SFRX(SCID,      0xff0b);
-SFRX(PMUCFG,    0xff0c);
-SFRX(CLKCFG,    0xff0d);
-SFRX(EXTIO ,    0xff0e);
-SFRX(PLLCFG,    0xff0f);
+SFRX(ECHV,      0xff00);        /**< EC Hardware Revision ID */
+SFRX(ECFV,      0xff01);        /**< EC Firmware Revision ID */
+SFRX(ECHA,      0xff02);        /**< EC High Adress */
+SFRX(ESCICFG,   0xff03);        /**< SCI Configuration */
+SFRX(ECCFG,     0xff04);        /**< EC Configuration */
+SFRX(SCIE0,     0xff05);        /**< EC SCI P0 Interrupt Enable */
+SFRX(SCIE1,     0xff06);        /**< EC SCI P1 Interrupt Enable */
+SFRX(SCIE2,     0xff07);        /**< EC SCI P3 Interrupt Enable */
+SFRX(SCIF0,     0xff08);        /**< EC SCI P0 Interrupt Flag */
+SFRX(SCIF1,     0xff09);        /**< EC SCI P1 Interrupt Flag */
+SFRX(SCIF2,     0xff0a);        /**< EC SCI P3 Interrupt Flag */
+SFRX(SCID,      0xff0b);        /**< EC SCI ID Write Port for 8051 firmware to generate SCI event */
+SFRX(PMUCFG,    0xff0c);        /**< PMU Control / Configuration */
+SFRX(CLKCFG,    0xff0d);        /**< Clock Configuration */
+SFRX(EXTIO ,    0xff0e);        /**< EC Extended Write IO data */
+SFRX(PLLCFG,    0xff0f);        /**< PLL Configuration */
 //;
 SFRX(RSV_0xff11,0xff11);
 SFRX(CLKCFG2,   0xff12);
@@ -347,30 +351,30 @@ SFRX(PLLFRH,    0xff16);
 SFRX(PLLFRL,    0xff17);
 SFRX(ADCTRL,    0xff18);
 SFRX(ADCDAT,    0xff19);
-SFRX(ECIF,      0xff1a);
-SFRX(ECDAT,     0xff1b);
-SFRX(ECCMD,     0xff1c);
-SFRX(ECSTS,     0xff1d);
+SFRX(ECIF,      0xff1a);        /**< EC Interrupt Pending Flag */
+SFRX(ECDAT,     0xff1b);        /**< EC Data Port */
+SFRX(ECCMD,     0xff1c);        /**< EC Command Port */
+SFRX(ECSTS,     0xff1d);        /**< EC Status Port */
 SFRX(PLLVAL_A,  0xff1e);
 SFRX(PLLVAL_B,  0xff1f);
 
 /** General Purpose Wake-up (hardware EC Space) */
-SFRX(GPWUEN00,  0xff30);
+SFRX(GPWUEN00,  0xff30);        /**< GPIO Event Enable and Asynchronous Wake Up Enable */
 SFRX(GPWUEN08,  0xff31);
 SFRX(GPWUEN10,  0xff32);
 SFRX(GPWUEN18,  0xff33);
 
-SFRX(GPWUPF00,  0xff40);
+SFRX(GPWUPF00,  0xff40);        /**< GPIO Event Pending Flag */
 SFRX(GPWUPF08,  0xff41);
 SFRX(GPWUPF10,  0xff42);
 SFRX(GPWUPF18,  0xff43);
 
-SFRX(GPWUPS00,  0xff50);
+SFRX(GPWUPS00,  0xff50);        /**< GPIO Polarity Selection */
 SFRX(GPWUPS08,  0xff51);
 SFRX(GPWUPS10,  0xff52);
 SFRX(GPWUPS18,  0xff53);
 
-SFRX(GPWUEL00,  0xff60);
+SFRX(GPWUEL00,  0xff60);        /**< GPIO Edge/Level Trigger Selection */
 SFRX(GPWUEL08,  0xff61);
 SFRX(GPWUEL10,  0xff62);
 SFRX(GPWUEL18,  0xff63);

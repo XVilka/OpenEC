@@ -62,7 +62,7 @@ extern unsigned char __xdata spurious_irq[4];
 UNUSED_IRQ(ext0_interrupt,      0x01)
 UNUSED_IRQ(timer0_interrupt,    0x02)
 UNUSED_IRQ(ext1_interrupt,      0x03)
-UNUSED_IRQ(timer1_interrupt,    0x04)
+//UNUSED_IRQ(timer1_interrupt,    0x04)
 UNUSED_IRQ(serial0_interrupt,   0x05)
 UNUSED_IRQ(n_a_0x06_interrupt,  0x06)
 UNUSED_IRQ(n_a_0x07_interrupt,  0x07)

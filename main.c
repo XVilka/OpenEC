@@ -58,6 +58,7 @@
 #include "port_0x6c.h"
 #include "states.h"
 #include "timer.h"
+#include "uart.h"
 #include "unused_irq.h"
 #include "watchdog.h"
 
@@ -126,18 +127,65 @@ bool handle_command(void)
     expecting the main loop to be functional yet.
 
     GPIO module is not reset by watchdog resets.
- */ 
+ */
 void port_init(void)
 {
+    /* LED CHG G# */
+    GPIOEOE0 |= 0x08;
+
+    /* LED CHG R# */
+    GPIOOE08 |= 0x04;
+
+    /* LED PWR# */
+    GPIOOE08 |= 0x02;
+
+    /* LED Light# / EC_EAPD??? */
+//    GPIOOE08 |= 0x01;
 }
 
 //! off-load blinking (and off-after-a-while) stuff to non IRQ
 void handle_leds(void)
 {
+    static unsigned int __xdata i;
+
+    i++;
+
+    /* LED CHG G# */
+    if( i & 0x100 )
+        GPIOED0 |= 0x08;
+    else
+        GPIOED0 &= ~0x08;
+
+    /* LED PWR# */
+    if( i & 0x200 )
+        GPIOD08 |= 0x02;
+    else
+        GPIOD08 &= ~0x02;
+
+    /* LED CHG R# */
+    if( i & 0x400 )
+        GPIOD08 |= 0x04;
+    else
+        GPIOD08 &= ~0x04;
+
+
 }
 
-void uart0_init(void)
+void puthex(unsigned char c)
 {
+    putchar("0123456789abcdef"[ c >> 4 ]);
+    putchar("0123456789abcdef"[ c & 0x0f ]);
+}
+
+void putstring(unsigned char *p)
+{
+    unsigned char c;
+
+    while( (c = *p) )
+    {
+        p++;
+        putchar(c);
+    }
 }
 
 //! Entering low power mode
@@ -154,13 +202,15 @@ void uart0_init(void)
 void main (void)
 {
     port_init();
-    save_old_states();
+//    save_old_states();
     watchdog_init();
-    timer_gpt3_init();
-    uart0_init();
+//    timer_gpt3_init();
+    uart_init();
+
+    putstring("Hello world!\r\n");
 
     /* enable interrupts. */
-    EA = 1;
+//    EA = 1;
 
     /* The main loop contains several state machines handling
        various subsystems on the EC.
@@ -181,15 +231,15 @@ void main (void)
      */
     while(1)
     {
-        STATES_TIMESTAMP();
+//        STATES_TIMESTAMP();
 
-        busy = handle_command();
-        busy |= handle_cursors();
-        busy |= handle_battery();
+//        busy = handle_command();
+//        busy |= handle_cursors();
+//        busy |= handle_battery();
         handle_leds();
 
-        if( !busy && may_sleep )
-            SLEEP();
+//        if( !busy && may_sleep )
+//            SLEEP();
     }
 }
 
