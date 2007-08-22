@@ -54,10 +54,10 @@ char __code __at(0xc000) cookie_3 = 0x03;
 char __code __at(0xff00) url_string[]     = "http://www.laptop.org";
 
 char __code __at(0xff90) name_string[]    = "openec";
-char __code __at(0xffa0) version_string[] = "0.0.1" PATCHLEVEL;
+char __code __at(0xffa0) version_string[] = "0.0.2" PATCHLEVEL;
 char __code __at(0xffb0) compiler_version[] = COMPILER_VERSION;
 char __code __at(0xffc0) status_string[]  = "dangerous!";
-char __code __at(0xffd0) target_string[]  = "Bx-By";
+char __code __at(0xffd0) target_string[]  = "B1-B1";
 char __code __at(0xffe0) date_string[]    = __DATE__; /* YYYY-MM-DD would be nicer, see ISO 8601 */
 char __code __at(0xfff0) time_string[]    = __TIME__;
 

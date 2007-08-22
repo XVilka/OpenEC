@@ -63,6 +63,14 @@
 #include "watchdog.h"
 
 
+#define LED_CHG_G_ON  do{GPIOED0 |=  0x08;}while(0)
+#define LED_CHG_G_OFF do{GPIOED0 &= ~0x08;}while(0)
+#define LED_CHG_R_ON  do{GPIOD08 |=  0x04;}while(0)
+#define LED_CHG_R_OFF do{GPIOD08 &= ~0x04;}while(0)
+#define LED_PWR_ON    do{GPIOD08 |=  0x02;}while(0)
+#define LED_PWR_OFF   do{GPIOD08 &= ~0x02;}while(0)
+
+
 //! This is set by an interrupt routine or a state machine
 /*! Value is reset during each iteration of the main loop.
     \see may_sleep
@@ -87,16 +95,20 @@ bool may_sleep = 1;
  */
 unsigned char _sdcc_external_startup(void)
 {
-    /* the code here is meant be able to put the EC into a safe
-       recovery mode that allows linux/BIOS to reflash EC code
-       with an EC image that is known to work.
-
-       We should take extra extra care that this works as intended.
-     */
-
     // watchdog?
     // ports to HiZ?
     // kick PLL?
+
+    PCON2 |= 0x11;      /**< Enable external space write. Enable idle loop no fetching instr. */
+    XBICFG = 0x64;      /**< as dumped by ec-dump.fth */
+    XBICS |= 0x30;      /**< bit 5 as dumped by ec-dump.fth, Enable Reset 8051 and XBI Segment Setting */
+    SPICFG |= 0x04;     /**< bit 2 as dumped by ec-dump.fth */
+    WDTCFG = 0x48;      /**< disable watchdog for now */
+    LPCFWH = 0xa0;      /**< as dumped by ec-dump.fth */
+    LPCCFG = 0xfd;      /**< as dumped by ec-dump.fth */
+    CLKCFG = 0x94;      /**< as dumped by ec-dump.fth */
+
+    // LPC_2EF is marked as internal use only but deviates from reset value
 
     return 0;
 }
@@ -146,29 +158,22 @@ void port_init(void)
 //! off-load blinking (and off-after-a-while) stuff to non IRQ
 void handle_leds(void)
 {
-    static unsigned int __xdata i;
-
-    i++;
-
-    /* LED CHG G# */
-    if( i & 0x100 )
-        GPIOED0 |= 0x08;
+    if( (unsigned char)second & 0x01 )
+        LED_PWR_ON;
     else
-        GPIOED0 &= ~0x08;
+        LED_PWR_OFF;
 
-    /* LED PWR# */
-    if( i & 0x200 )
-        GPIOD08 |= 0x02;
-    else
-        GPIOD08 &= ~0x02;
-
-    /* LED CHG R# */
-    if( i & 0x400 )
-        GPIOD08 |= 0x04;
-    else
-        GPIOD08 &= ~0x04;
-
-
+    switch ((unsigned char)second & 0x07 )
+    {
+        case 0: LED_CHG_R_ON;
+                break;
+        case 2: LED_CHG_G_ON;
+                break;
+        case 4: LED_CHG_R_OFF;
+                break;
+        case 6: LED_CHG_G_OFF;
+                break;
+    }
 }
 
 void puthex(unsigned char c)
@@ -198,19 +203,33 @@ void putstring(unsigned char *p)
 } while(0)
 
 
+//! output a char every second
+void debug_uart_ping(void)
+{
+    static unsigned char __xdata my_s;
+
+    if( my_s != (unsigned char)second )
+    {
+        my_s = (unsigned char)second;
+
+        SBUF = '*';   // For now simply write without caring for TI...
+    }
+}
+
+
 //! You expected it: This routine is expected never to exit
 void main (void)
 {
     port_init();
-//    save_old_states();
+    save_old_states();
     watchdog_init();
-//    timer_gpt3_init();
+    timer_gpt3_init();
     uart_init();
 
     putstring("Hello world!\r\n");
 
     /* enable interrupts. */
-//    EA = 1;
+    EA = 1;
 
     /* The main loop contains several state machines handling
        various subsystems on the EC.
@@ -231,12 +250,15 @@ void main (void)
      */
     while(1)
     {
-//        STATES_TIMESTAMP();
+        STATES_TIMESTAMP();
 
 //        busy = handle_command();
 //        busy |= handle_cursors();
 //        busy |= handle_battery();
         handle_leds();
+
+        debug_uart_ping();
+
 
 //        if( !busy && may_sleep )
 //            SLEEP();

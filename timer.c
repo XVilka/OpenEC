@@ -27,9 +27,6 @@
 #include "timer.h"
 
 
-//! number of timer IRQs per second
-#define HZ (100)
-
 //! incremented by IRQ
 /*! It's a 16 bit variable and the 8051 is a 8 bit CPU,
     so when reading this variable be sure that hi and lo
@@ -55,13 +52,13 @@ volatile unsigned long __pdata second;
   */
 void timer_gpt3_init(void)
 {
-    /* which one to use? */
-    GPT3H = -(SYSCLOCK/HZ>>8);
-    GPT3L = -(SYSCLOCK/HZ&0xff);
+    GPT3H = SYSCLOCK / HZ >> 8;
+    GPT3L = SYSCLOCK / HZ & 0xff;
 
     /* IRQ enable & enable. Is it true that one bit is
        used with dual purpose? */
-    GPTCFG |= 0x08;
+    GPTCFG |= 0x10 |    /**< GP test mode, system clock */
+              0x08;     /**< enable GPT3 counting */
 
     /* start */
     GPTPF |= 0x80;
@@ -110,6 +107,9 @@ void timer_gpt3_interrupt(void) __interrupt(0x17)
         tick_next_s += HZ;
         second++;
 
+//        WDTCFG |= 0x01;
+//        WDTPF = 0x03;
+
         /* handle watchdog. Here? */
         if( watchdog_all_up_and_well == (WATCHDOG_MAIN_LOOP_IS_FINE |
                                          WATCHDOG_PS2_IS_FINE |
@@ -120,6 +120,7 @@ void timer_gpt3_interrupt(void) __interrupt(0x17)
             /* reset this so subsystems have to report again */
             watchdog_all_up_and_well = 0x00;
         }
+        
     }
 }
 

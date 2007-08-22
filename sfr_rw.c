@@ -67,6 +67,10 @@ unsigned char read_mcs51_sfr(unsigned char address) __naked
 
     __endasm;
 
+#else
+
+    return 0xff;
+
 #endif
 
 }

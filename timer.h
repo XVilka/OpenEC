@@ -23,7 +23,7 @@
 -------------------------------------------------------------------------*/
 
 //! number of timer IRQs per second
-#define HZ (100)
+#define HZ (1000)
 #define SYSCLOCK (32000000uL)  /* true? */
 
 extern volatile unsigned int __pdata tick;
