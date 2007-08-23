@@ -31,7 +31,7 @@
 
 //! bit mask for keys within game_key_status
 #define KEY_LR_R  0x02
-#define KEY_LF_R  KEY_LR_R /* naming in schematic EC KB3700 2006-12-04 and wiki differs */
+#define KEY_LF_R  ?
 #define KEY_RT_R  0x04
 #define KEY_UP_L  0x08
 
@@ -102,7 +102,7 @@ void debug_toggle(void)
 
 
 //! Handles input from 3x3 matrix
-/*! see also http://wiki.laptop.org/go/Ec_specification KeyCodes
+/*! see also http://wiki.laptop.org/index.php?title=Ec_specification&action=edit&section=6
  *
  * This routine only reacts on a single key change.
  * If more than one key is changed (can you really
