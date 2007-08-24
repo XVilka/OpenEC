@@ -1,5 +1,5 @@
 /*-------------------------------------------------------------------------
-   states.c - skeleton for the Embedded Controler of the OLPC project
+   states.c - States machines
 
    Copyright (C) 2007  Frieder Ferlemann <Frieder.Ferlemann AT web.de>
 

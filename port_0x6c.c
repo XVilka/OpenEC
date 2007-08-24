@@ -1,5 +1,5 @@
 /*-------------------------------------------------------------------------
-   port_0x6c.c - host communication routines for the EC of the OLPC
+   port_0x6c.c - Host communication routines for the EC of the OLPC
 
    Copyright (C) 2007  Frieder Ferlemann <Frieder.Ferlemann AT web.de>
 
