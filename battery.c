@@ -1,5 +1,5 @@
 /*-------------------------------------------------------------------------
-   battery.c - skeleton for battery handling with the Embedded Controler
+   battery.c - skeleton for battery handling with the Embedded Controller
 
    Copyright (C) 2007  Frieder Ferlemann <Frieder.Ferlemann AT web.de>
 
@@ -22,7 +22,7 @@
    what you give them.   Help stamp out software-hoarding!
 -------------------------------------------------------------------------*/
 
-/* this is just to have something there.
+/* This is just to have something there.
  */
 #include <stdbool.h>
 #include "kb3700.h"
