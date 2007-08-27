@@ -30,8 +30,7 @@
 #define UPDATE_GAME_KEY_STATUS 1
 
 //! bit mask for keys within game_key_status
-#define KEY_LR_R  0x02
-#define KEY_LF_R  ?
+#define KEY_LF_R  0x02
 #define KEY_RT_R  0x04
 #define KEY_UP_L  0x08
 
