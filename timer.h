@@ -23,8 +23,9 @@
 -------------------------------------------------------------------------*/
 
 //! number of timer IRQs per second
-#define HZ (1000)
-#define SYSCLOCK (32000000uL)  /* true? */
+#define HZ (100u)
+#define SYSCLOCK (32000000uL)  /**< in Hertz, true? */
+#define GPTCLOCK (32768u)      /**< in Hertz, true? */
 
 extern volatile unsigned int __pdata tick;
 extern volatile unsigned long __pdata second;

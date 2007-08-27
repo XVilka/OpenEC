@@ -228,6 +228,16 @@ void main (void)
 
     putstring("Hello world!\r\n");
 
+#if 0
+// This was used for the oscilloscope screenshot mentioned/appended here:
+// http://lists.laptop.org/pipermail/openec/2007-August/000053.html
+while(1)
+{
+    LED_PWR_ON;
+    LED_PWR_OFF;
+}
+#endif
+
     /* enable interrupts. */
     EA = 1;
 

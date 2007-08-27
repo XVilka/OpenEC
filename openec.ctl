@@ -1,7 +1,7 @@
 ;
-; Header file for d52
+; Header file for d52 (GPL'ed Disassembler for Linux and Windows)
 ;
-; http://home.pacbell.net/theposts/
+; http://www.8052.com/users/disasm/
 ;
 ; derived from:
 ; KB3700 Keyboard Controller Datasheet Revision 0.1

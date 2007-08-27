@@ -45,20 +45,22 @@ static volatile unsigned char __pdata tick_next_s;
 volatile unsigned long __pdata second;
 
 
- //! There is no embedded device without a timer, is there?
- /*! different speed if powered down?
-     Currently using the timer with lowermost priority
-     for the timer tick IRQ
-  */
+//! There is no embedded device without a timer, is there?
+/*! different speed if powered down?
+    Currently using the 8-bit timer with lowermost priority
+    for the timer tick IRQ
+
+    \bug HZ==100 and GPTCLOCK==32768u result in an
+    \bug unexpected intervall of 10.70 ms here.
+ */
 void timer_gpt3_init(void)
 {
-    GPT3H = SYSCLOCK / HZ >> 8;
-    GPT3L = SYSCLOCK / HZ & 0xff;
+    GPT3H = GPTCLOCK / HZ >> 8;
+    GPT3L = GPTCLOCK / HZ & 0xff;
 
     /* IRQ enable & enable. Is it true that one bit is
        used with dual purpose? */
-    GPTCFG |= 0x10 |    /**< GP test mode, system clock */
-              0x08;     /**< enable GPT3 counting */
+    GPTCFG |= 0x08;     /**< enable GPTn counting */
 
     /* start */
     GPTPF |= 0x80;
@@ -97,10 +99,16 @@ void timer_gpt3_init(void)
  */
 void timer_gpt3_interrupt(void) __interrupt(0x17)
 {
-    /* reset IRQ pending flag */
-    GPTPF |= 0x08; // is this the way to reset it?
+    /* reset IRQ pending flag 
+       is this the way to reset it?
+       or rather GPTPF = 0x08; */
+    GPTPF |= 0x08;
 
     tick++;
+
+#if (HZ > 255)
+# warning code expects HZ to fit in a byte
+#endif
 
     if( (unsigned char)tick == tick_next_s )
     {
@@ -120,7 +128,6 @@ void timer_gpt3_interrupt(void) __interrupt(0x17)
             /* reset this so subsystems have to report again */
             watchdog_all_up_and_well = 0x00;
         }
-        
     }
 }
 
