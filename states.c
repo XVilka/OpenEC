@@ -22,7 +22,13 @@
    what you give them.   Help stamp out software-hoarding!
 -------------------------------------------------------------------------*/
 
+#include <stdbool.h>
+#include "kb3700.h"
 #include "states.h"
+#include "matrix_3x3.h"
+#include "uart.h"
+
+#define DEBUG_MATRIX_3x3 (1)
 
 //! this variable is meant to be used for debugging purposes only
 /*! the state machines work on their private state variables (which
@@ -94,3 +100,45 @@ void save_old_states( void )
 }
 
 #endif
+
+void print_states_ruler (void)
+{
+     putstring("\r\ntime numb co ma ba ds wa");
+}
+
+void print_states (void)
+{
+     unsigned char i;
+
+     putstring("\r\n");
+     puthex_u16(states.timestamp);
+     putspace();
+     puthex_u16(states.number);
+     putspace();
+     puthex(states.command);
+     putspace();
+     puthex(states.matrix_3x3);
+     putspace();
+     puthex(states.battery);
+     putspace();
+     puthex(states.ds2756);
+     putspace();
+     puthex(states.watchdog);
+     putspace();
+
+#if DEBUG_MATRIX_3x3
+     puthex(GPIOEIN0);
+     putspace();
+     for(i=0; i<5; i++)
+     {
+         puthex(((unsigned char __pdata *)&cursors)[i]);
+         if( i==2 )
+             putspace();
+     }
+     if( cursors.keycode_updated )
+     {
+         putchar('*');
+         cursors.keycode_updated = 0;
+     }
+#endif
+}

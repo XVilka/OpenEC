@@ -1,5 +1,5 @@
 /*-------------------------------------------------------------------------
-   matrix_3x3.h - routines to handle 3x3 matrix within the OLPC project
+   build.h - keeps version related info
 
    Copyright (C) 2007  Frieder Ferlemann <Frieder.Ferlemann AT web.de>
 
@@ -22,29 +22,16 @@
    what you give them.   Help stamp out software-hoarding!
 -------------------------------------------------------------------------*/
 
-//! keeps the externally visible data to handle the 3x3 matrix
-typedef struct cursors
-{
-    //! keycode we'd want to transmit to the host
-    unsigned char keycode[3];
+/* locations might be frozen in far future */
+extern char __code __at(0xf300) url_string[];
 
-    //! 9 bits of key status as transmitted to the host
-    unsigned char game_key_status[2];
-    
-    // unsigned int keycode_timestamp;
+extern char __code __at(0xf390) name_string[];
+extern char __code __at(0xf3a0) version_string[];
+extern char __code __at(0xf3b0) compiler_version[];
+extern char __code __at(0xf3c0) status_string[];
+extern char __code __at(0xf3d0) target_string[];
+extern char __code __at(0xf3e0) date_string[];
+extern char __code __at(0xf3f0) time_string[];
 
-    //! Flag for handshaking
-    /*! If there's a new keycode this flag is set.
-        If transmitted another routine will reset this flag.
-        Note, this currently is the only variable that might
-        be changed from "outside" (from a routine that is
-        not within matrix_3x3.c)
-     */
-    unsigned int keycode_updated:1;
-};
-
-extern struct cursors __pdata cursors;
-
-extern bool handle_cursors(void);
-
-extern void cursors_init(void);
+extern unsigned long  __code __at(0xfffc) code_checksum;
+extern unsigned long  __code __at(0xf3fc) code_checksum_reserved;

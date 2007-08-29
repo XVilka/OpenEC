@@ -22,6 +22,7 @@
    what you give them.   Help stamp out software-hoarding!
 -------------------------------------------------------------------------*/
 #include "compiler.h"
+#include "build.h"
 
 
 #define PATCHLEVEL "p0"
@@ -51,15 +52,15 @@ char __code __at(0xc000) cookie_3 = 0x03;
 
 
 /* locations might be frozen in far future */
-char __code __at(0xff00) url_string[]     = "http://www.laptop.org";
+char __code __at(0xf300) url_string[]     = "http://www.laptop.org";
 
-char __code __at(0xff90) name_string[]    = "openec";
-char __code __at(0xffa0) version_string[] = "0.0.2" PATCHLEVEL;
-char __code __at(0xffb0) compiler_version[] = COMPILER_VERSION;
-char __code __at(0xffc0) status_string[]  = "dangerous!";
-char __code __at(0xffd0) target_string[]  = "B1-B1";
-char __code __at(0xffe0) date_string[]    = __DATE__; /* YYYY-MM-DD would be nicer, see ISO 8601 */
-char __code __at(0xfff0) time_string[]    = __TIME__;
+char __code __at(0xf390) name_string[]    = "openec";
+char __code __at(0xf3a0) version_string[] = "0.0.3" PATCHLEVEL;
+char __code __at(0xf3b0) compiler_version[] = COMPILER_VERSION;
+char __code __at(0xf3c0) status_string[]  = "dangerous!";
+char __code __at(0xf3d0) target_string[]  = "B1-B1";
+char __code __at(0xf3e0) date_string[]    = __DATE__; /* YYYY-MM-DD would be nicer, see ISO 8601 */
+char __code __at(0xf3f0) time_string[]    = __TIME__;
 
 //! set so that the 32 bit overall little endian checksum over 0x0000-0xffff is zero
 /*! see arguments to srec_cat in Makefile. There might be another checksum

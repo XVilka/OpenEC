@@ -73,6 +73,18 @@ static struct
 } __pdata cursors_private;
 
 
+
+void cursors_init( void )
+{
+    /* KEY_OUT_n is output */
+    GPIOOE10 |= 0xe0;
+
+    /* KEY_IN_n and POWER_BUTTON# are input */
+    *(volatile unsigned char __xdata *)0xfc64 |= 0xf0;  /* avoiding name clash, GPIOEIN0 */
+}
+
+
+
 #ifdef SDCC
 # pragma callee_saves debug_toggle
 #endif
@@ -182,7 +194,7 @@ bool handle_cursors(void)
        can someone send an oscillocope screenshot
        and/or measure capacity of KEY_IN_1..3?)
      */
-    in = ((unsigned char)~GPIOIN10 >> 4) & 0x07;
+    in = ((unsigned char)~GPIOEIN0 >> 4) & 0x07;
 
     /* do some debouncing.
        The way it is done here ensures that a "Make" transition

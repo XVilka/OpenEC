@@ -54,6 +54,7 @@
 #include <stdbool.h>
 #include "kb3700.h"
 #include "battery.h"
+#include "build.h"
 #include "matrix_3x3.h"
 #include "port_0x6c.h"
 #include "states.h"
@@ -83,7 +84,7 @@ bool busy;
     iteration of the main loop. Currently not in use?
     \see busy
  */
-bool may_sleep = 1;
+bool may_sleep = 0;
 
 
 //! pre-C stuff
@@ -163,33 +164,16 @@ void handle_leds(void)
     else
         LED_PWR_OFF;
 
-    switch ((unsigned char)second & 0x07 )
+    switch ((unsigned char)second & 0x03 )
     {
         case 0: LED_CHG_R_ON;
                 break;
-        case 2: LED_CHG_G_ON;
+        case 1: LED_CHG_G_ON;
                 break;
-        case 4: LED_CHG_R_OFF;
+        case 2: LED_CHG_R_OFF;
                 break;
-        case 6: LED_CHG_G_OFF;
+        case 3: LED_CHG_G_OFF;
                 break;
-    }
-}
-
-void puthex(unsigned char c)
-{
-    putchar("0123456789abcdef"[ c >> 4 ]);
-    putchar("0123456789abcdef"[ c & 0x0f ]);
-}
-
-void putstring(unsigned char *p)
-{
-    unsigned char c;
-
-    while( (c = *p) )
-    {
-        p++;
-        putchar(c);
     }
 }
 
@@ -217,26 +201,32 @@ void debug_uart_ping(void)
 }
 
 
+void startup_message(void)
+{
+    putstring("\r\nHello World!\r\n");
+    putstring(name_string);    putspace();
+    putstring(version_string); putspace();
+    puthex(ECHV);              putspace();
+    putstring(date_string);    putspace();
+    putstring(time_string);
+}
+
+
 //! You expected it: This routine is expected never to exit
 void main (void)
 {
     port_init();
-    save_old_states();
     watchdog_init();
     timer_gpt3_init();
+    cursors_init();
     uart_init();
 
-    putstring("Hello world!\r\n");
+    startup_message();
 
-#if 0
-// This was used for the oscilloscope screenshot mentioned/appended here:
-// http://lists.laptop.org/pipermail/openec/2007-August/000053.html
-while(1)
-{
-    LED_PWR_ON;
-    LED_PWR_OFF;
-}
-#endif
+    print_states_ruler();
+    print_states();
+    save_old_states();
+    states.number = 0;
 
     /* enable interrupts. */
     EA = 1;
@@ -262,16 +252,19 @@ while(1)
     {
         STATES_TIMESTAMP();
 
-//        busy = handle_command();
-//        busy |= handle_cursors();
+        busy = handle_command();
+        busy |= handle_cursors();
 //        busy |= handle_battery();
         handle_leds();
 
-        debug_uart_ping();
+//        debug_uart_ping();
 
+        watchdog_all_up_and_well |= WATCHDOG_MAIN_LOOP_IS_FINE;
 
-//        if( !busy && may_sleep )
-//            SLEEP();
+        print_states();
+
+        if( !busy && may_sleep )
+            SLEEP();
     }
 }
 

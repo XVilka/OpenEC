@@ -180,6 +180,9 @@ void set_time(unsigned long s)
     /* sync */
     tick_next_s = tick + HZ;
 
+    /* reset timer and an eventually pending IRQ flag */
+    GPTPF = 0x88;
+
     /* reenable the IRQ. It was enabled wasn't it? */
     P1IE |= 0x80;
 }

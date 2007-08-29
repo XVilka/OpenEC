@@ -22,8 +22,8 @@ $(PROJECT).ihx : $(RELS)
 	$(CC) -o $@ $(LFLAGS) $(RELS)
 	$(SREC_CAT) -disable_sequence_warnings \
 	             $(PROJECT).ihx -intel \
-	             -fill 0xff 0x0000 0xf400 \
-	             -fill 0x00 0xf400 0xfffc \
+	             -fill 0xff 0x0000 0xf300 \
+	             -fill 0x00 0xf300 0xfffc \
 	             -little_endian_checksum_negative 0xfffc 4 4 \
 	             -o $(PROJECT).bin -binary
 	if test "x`which $(D52) 2>/dev/null`" != "x" ; then $(D52) -p -n -d -b $(PROJECT).bin ; fi;

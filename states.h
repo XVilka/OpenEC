@@ -72,3 +72,5 @@ extern struct states_type __xdata __at (0xfbc0) states;
 extern struct states_type __xdata __at (0xfb80) old_states;
 
 void save_old_states( void );
+void print_states (void);
+void print_states_ruler (void);

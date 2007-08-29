@@ -25,6 +25,9 @@
 #include <stdbool.h>
 #include "kb3700.h"
 
+#define BITBANG (1)
+
+#if !BITBANG || !defined(SDCC)
 void putchar(unsigned char c)
 {
     volatile unsigned int t = 1000; /**< no endless loop for now
@@ -62,3 +65,105 @@ TMOD = 0x11;
 TR0 = 1;
 TR1 = 1;
 }
+
+#else
+
+
+void putchar(unsigned char c)
+{
+    __asm
+        mov     r2,dpl      ; argument
+        mov     r3,#0x08    ; number of bits
+        mov     dptr,#_GPIOD00
+
+        ;
+        clr     ea          ; disable IRQ
+
+
+        movx    a,@dptr
+        anl     a,#0xBF     ; TX_LOW;
+        movx    @dptr,a
+
+        mov     r4,#0x03
+    STARTBITDELAY$:
+        djnz    r4,STARTBITDELAY$
+        ;
+
+    BITLOOP$:
+        mov     a,r2
+        rrc     a           ; bit to send is in Carry now
+        mov     r2,a
+        ;
+
+        movx    a,@dptr
+        mov     _ACC_6,c    ; move carry into bit 6
+        movx    @dptr,a
+        ;
+        mov     r4,#0x02
+    BITDELAY$:
+        djnz    r4,BITDELAY$
+        nop
+        ;
+
+        djnz    r3,BITLOOP$
+        ;
+
+        mov     r4,#0x02
+    BITDELAY2$:
+        djnz    r4,BITDELAY2$
+        ;
+
+        movx    a,@dptr
+        orl     a,#0x40     ; TX_HIGH;
+        movx    @dptr,a
+
+        ;
+        setb    ea          ; enable IRQ
+        ;
+
+        mov     r4,#0x0a
+    STOPBITDELAY:
+        djnz    r4,STOPBITDELAY
+        ;
+
+    __endasm;
+}
+
+
+void uart_init()
+{
+    GPIOD00  |=  0x40; /**< set TX high */
+    GPIOOE00 |=  0x40; /**< output enable for TX */
+}
+#endif
+
+
+void puthex(unsigned char c)
+{
+    putchar("0123456789abcdef"[ c >> 4 ]);
+    putchar("0123456789abcdef"[ c & 0x0f ]);
+}
+
+void puthex_u16(unsigned int i)
+{
+    puthex((unsigned char)(i>>8));
+    puthex((unsigned char)i);
+}
+
+void putspace()
+{
+    putchar(' ');
+}
+
+void putstring(unsigned char *p)
+{
+    unsigned char c;
+
+    while( (c = *p) )
+    {
+        p++;
+        putchar(c);
+    }
+}
+
+

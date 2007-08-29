@@ -28,3 +28,8 @@
 void putchar(unsigned char c);
 
 void uart_init();
+
+void puthex(unsigned char c);
+void puthex_u16(unsigned int i);
+void putspace();
+void putstring(unsigned char *p);
