@@ -103,7 +103,7 @@ void save_old_states( void )
 
 void print_states_ruler (void)
 {
-     putstring("\r\ntime numb co ma ba ds wa");
+     putstring("\r\ntime numb co ma po ba ds wa");
 }
 
 void print_states (void)
@@ -118,6 +118,8 @@ void print_states (void)
      puthex(states.command);
      putspace();
      puthex(states.matrix_3x3);
+     putspace();
+     puthex(states.power);
      putspace();
      puthex(states.battery);
      putspace();

@@ -13,7 +13,7 @@ RSTS      = $(SOURCES:.c=.rst)
 ADBS      = $(SOURCES:.c=.adb)
 PROJECT   = openec
 SOURCES   = main.c fs_entry.c battery.c ds2756.c matrix_3x3.c port_0x6c.c \
-            sfr_dump.c sfr_rw.c states.c timer.c uart.c unused_irq.c \
+            power.c sfr_dump.c sfr_rw.c states.c timer.c uart.c unused_irq.c \
             watchdog.c build.c
 
 .SUFFIXES: .rel

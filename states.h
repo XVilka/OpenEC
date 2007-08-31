@@ -42,6 +42,7 @@ typedef struct states_type {
      unsigned int number;
      unsigned char command;
      unsigned char matrix_3x3;
+     unsigned char power;
      unsigned char battery;
      unsigned char ds2756;
      unsigned char keyboard;

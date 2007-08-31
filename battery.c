@@ -23,6 +23,9 @@
 -------------------------------------------------------------------------*/
 
 /* This is just to have something there.
+
+   See also:
+   http://dev.laptop.org/git.do?p=olpc-2.6;a=tree;f=drivers/power
  */
 #include <stdbool.h>
 #include "kb3700.h"

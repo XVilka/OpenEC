@@ -56,6 +56,7 @@
 #include "battery.h"
 #include "build.h"
 #include "matrix_3x3.h"
+#include "power.h"
 #include "port_0x6c.h"
 #include "sfr_dump.h"
 #include "states.h"
@@ -65,12 +66,10 @@
 #include "watchdog.h"
 
 
-#define LED_CHG_G_ON  do{GPIOED0 |=  0x08;}while(0)
-#define LED_CHG_G_OFF do{GPIOED0 &= ~0x08;}while(0)
-#define LED_CHG_R_ON  do{GPIOD08 |=  0x04;}while(0)
-#define LED_CHG_R_OFF do{GPIOD08 &= ~0x04;}while(0)
-#define LED_PWR_ON    do{GPIOD08 |=  0x02;}while(0)
-#define LED_PWR_OFF   do{GPIOD08 &= ~0x02;}while(0)
+#define LED_CHG_G_OFF do{GPIOED0 |=  0x08;}while(0)
+#define LED_CHG_G_ON  do{GPIOED0 &= ~0x08;}while(0)
+#define LED_CHG_R_OFF do{GPIOD08 |=  0x04;}while(0)
+#define LED_CHG_R_ON  do{GPIOD08 &= ~0x04;}while(0)
 
 
 //! This is set by an interrupt routine or a state machine
@@ -155,16 +154,16 @@ void port_init(void)
 
     /* LED Light# / EC_EAPD??? */
 //    GPIOOE08 |= 0x01;
+
+    /* for now?  */
+    LED_CHG_G_ON;
+    LED_CHG_R_ON;
+    LED_PWR_ON;
 }
 
 //! off-load blinking (and off-after-a-while) stuff to non IRQ
 void handle_leds(void)
 {
-    if( (unsigned char)second & 0x01 )
-        LED_PWR_ON;
-    else
-        LED_PWR_OFF;
-
     switch ((unsigned char)second & 0x03 )
     {
         case 0: LED_CHG_R_ON;
@@ -227,6 +226,7 @@ void startup_message(void)
     /* Silicon Revision */
     putstring(" Mask(");
     puthex(ECHV);
+    /* Stack pointer */
     putstring(") SP(");
     puthex(SP);
     putstring(") ");
@@ -254,6 +254,11 @@ void main (void)
     print_states();
     save_old_states();
     states.number = 0;
+
+    power_init();
+    LED_CHG_G_OFF;
+    LED_CHG_R_OFF;
+    LED_PWR_OFF;
 
     /* enable interrupts. */
     EA = 1;
@@ -289,6 +294,8 @@ void main (void)
         watchdog_all_up_and_well |= WATCHDOG_MAIN_LOOP_IS_FINE;
 
         print_states();
+
+        handle_power();
 
         handle_debug();
 

@@ -93,7 +93,7 @@ void dump_xdata_sfr( void )
     {
         putstring( "\r\n" );
         k = putstring( ec_range[i].name );
-        while( k++ < 8 )
+        while( k++ < 7 )
             putspace();
         puthex_u16( (unsigned int)ec_range[i].address );
         putchar(':');
