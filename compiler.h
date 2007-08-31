@@ -184,6 +184,7 @@
 # define __at(x)
 # define __using(x)
 # define __interrupt(x)
+# define __naked
 
 #endif
 

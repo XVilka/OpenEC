@@ -1,7 +1,7 @@
 /*-------------------------------------------------------------------------
-   uart.h - handle serial IO on the EC
+   sfr_dump.h - dump register settings
 
-   Copyright (C) 2007  
+   Copyright (C) 2007  Frieder Ferlemann <Frieder.Ferlemann AT web.de>
 
    This program is free software; you can redistribute it and/or modify it
    under the terms of the GNU General Public License as published by the
@@ -22,14 +22,5 @@
    what you give them.   Help stamp out software-hoarding!
 -------------------------------------------------------------------------*/
 
-#include <stdbool.h>
-#include "kb3700.h"
-
-void putchar(unsigned char c);
-
-void uart_init();
-
-void puthex(unsigned char c);
-void puthex_u16(unsigned int i);
-void putspace();
-unsigned char putstring(unsigned char *p);
+void dump_mcs51_sfr( void );
+void dump_xdata_sfr( void );

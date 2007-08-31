@@ -155,15 +155,17 @@ void putspace()
     putchar(' ');
 }
 
-void putstring(unsigned char *p)
+unsigned char putstring(unsigned char *p)
 {
     unsigned char c;
+    unsigned char len = 0;
 
-    while( (c = *p) )
+    while( (c = *p++) )
     {
-        p++;
         putchar(c);
+        len++;
     }
+    return len;
 }
 
 

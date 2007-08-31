@@ -57,6 +57,7 @@
 #include "build.h"
 #include "matrix_3x3.h"
 #include "port_0x6c.h"
+#include "sfr_dump.h"
 #include "states.h"
 #include "timer.h"
 #include "uart.h"
@@ -200,14 +201,37 @@ void debug_uart_ping(void)
     }
 }
 
+void handle_debug(void)
+{
+    static unsigned char __pdata my_game_key_status[2];
+
+    /* does current state of this bit differ from the state that was last seen */
+    if( (cursors.game_key_status[0] ^ my_game_key_status[0]) & 0x02 )
+    {
+        /* track that bit */
+        my_game_key_status[0] ^= 0x02;
+        if( my_game_key_status[0] & 0x02)
+        {
+            dump_mcs51_sfr();
+            dump_xdata_sfr();
+        }
+    }
+}
 
 void startup_message(void)
 {
     putstring("\r\nHello World!\r\n");
-    putstring(name_string);    putspace();
-    putstring(version_string); putspace();
-    puthex(ECHV);              putspace();
-    putstring(date_string);    putspace();
+    putstring(name_string);
+    putspace();
+    putstring(version_string);
+    /* Silicon Revision */
+    putstring(" Mask(");
+    puthex(ECHV);
+    putstring(") SP(");
+    puthex(SP);
+    putstring(") ");
+    putstring(date_string);
+    putspace();
     putstring(time_string);
 }
 
@@ -222,6 +246,9 @@ void main (void)
     uart_init();
 
     startup_message();
+
+    dump_mcs51_sfr();
+    dump_xdata_sfr();
 
     print_states_ruler();
     print_states();
@@ -262,6 +289,8 @@ void main (void)
         watchdog_all_up_and_well |= WATCHDOG_MAIN_LOOP_IS_FINE;
 
         print_states();
+
+        handle_debug();
 
         if( !busy && may_sleep )
             SLEEP();

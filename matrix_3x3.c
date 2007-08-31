@@ -79,8 +79,8 @@ void cursors_init( void )
     /* KEY_OUT_n is output */
     GPIOOE10 |= 0xe0;
 
-    /* KEY_IN_n and POWER_BUTTON# are input */
-    *(volatile unsigned char __xdata *)0xfc64 |= 0xf0;  /* avoiding name clash, GPIOEIN0 */
+    /* KEY_IN_n is input */
+    *(volatile unsigned char __xdata *)0xfc64 |= 0x70;  /* avoiding name clash, GPIOEIN0 */
 }
 
 
