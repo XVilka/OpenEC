@@ -169,6 +169,11 @@ unsigned long get_time(void)
 
 //! sets the time
 /*! calling this might upset functions using the variable second
+
+    \warning Listed in order of my personal preference:
+    \warning a) should this clear the wake-up timer? or
+    \warning b) should the wake-up timer be corrected accordingly? or
+    \warning c) should we rely on the host doing it himself?
  */
 void set_time(unsigned long s)
 {

@@ -86,6 +86,7 @@ bool busy;
  */
 bool may_sleep = 0;
 
+unsigned char __xdata board_id;
 
 //! pre-C stuff
 /*! Code that is executed before C-startup may be placed here.
@@ -161,6 +162,88 @@ void port_init(void)
     LED_PWR_ON;
 }
 
+
+void adc_init(void)
+{
+    ADDAEN = 0x03;
+
+    /* Reset pending flag */
+    P3IF &= ~0x80;
+
+    /* start conversion on ADC1 */
+    ADCTRL = 0x05;
+}
+
+void get_board_id(void)
+{
+    unsigned int i;
+    unsigned char adc;
+    unsigned char __code board_id_table[16] =
+    {
+        0xff,
+        0xb3,  0xff,
+        0xb4,  0xff,
+        0x00,  0xff,
+        0x01,  0xff,
+        0xb2,  0xff,
+        0x02,  0xff,
+        0x03,  0xff,
+        0x04,
+    };
+
+    /* from http://wiki.laptop.org/go/Ec_specification 20070901
+        00-07h	B3	
+        08-17h		guard band
+        18-27h	B4	
+        28-37h		guard band
+        38-47h	N	
+        48-57h		guard band
+        58-67h	N + 1	
+        68-77h		guard band
+        78-87h	B2	
+        88-97h		guard band
+        98-A7h	N + 2	
+        A8-B7h		guard band
+        B8-C7h	N + 3	
+        C8-D7h		guard band
+        D8-E7h	N + 4	
+        E8-F7h		guard band
+        F8-FFh	N + 5	
+    */
+
+    /* enable ADC channels */
+    ADDAEN = 0x03;
+
+    /* Reset ADC IRQ pending flag */
+    P3IF &= ~0x80;
+
+    /* select ADC1, is a settling time needed? */
+    ADCTRL = 0x04;
+
+    /* start conversion on ADC1 */
+    ADCTRL = 0x05;
+
+    for( i = 0; i != 0x3fff; i++ )
+    {
+        if( P3IF & 0x80 )       /**< end of conversion? Method 1 */
+            break;
+        if( !(ADCTRL & 0x01) )  /**< end of conversion? Method 2 */
+            break;
+    }
+
+    adc = ADCDAT;
+
+    if( adc >= 0xf8 )
+        board_id = 0x05;
+    else if( adc >= 0xe8 )
+        board_id = 0xff;
+    else
+        board_id = board_id_table[ (unsigned char)(adc + 0x08) / 0x10 ];
+
+    /* Hmmm, the ADC always seems to run into timeout? */
+    /* putspace(); puthex_u16(i); putspace(); puthex(ADCDAT); */
+}
+
 //! off-load blinking (and off-after-a-while) stuff to non IRQ
 void handle_leds(void)
 {
@@ -215,7 +298,20 @@ void handle_debug(void)
             dump_xdata_sfr();
         }
     }
+
+    /* does current state of this bit differ from the state that was last seen */
+    if( (cursors.game_key_status[0] ^ my_game_key_status[0]) & 0x04 )
+    {
+        /* track that bit */
+        my_game_key_status[0] ^= 0x04;
+        if( my_game_key_status[0] & 0x04)
+        {
+            dump_gpio();
+        }
+    }
+
 }
+
 
 void startup_message(void)
 {
@@ -226,6 +322,9 @@ void startup_message(void)
     /* Silicon Revision */
     putstring(" Mask(");
     puthex(ECHV);
+    /* ADC reading codes Board ID */
+    putstring(") ID(");
+    puthex(board_id);
     /* Stack pointer */
     putstring(") SP(");
     puthex(SP);
@@ -242,20 +341,23 @@ void main (void)
     port_init();
     watchdog_init();
     timer_gpt3_init();
+    adc_init();
     cursors_init();
     uart_init();
+    power_init();
+    get_board_id();
 
     startup_message();
 
     dump_mcs51_sfr();
     dump_xdata_sfr();
+    dump_gpio();
 
     print_states_ruler();
     print_states();
     save_old_states();
     states.number = 0;
 
-    power_init();
     LED_CHG_G_OFF;
     LED_CHG_R_OFF;
     LED_PWR_OFF;

@@ -24,3 +24,4 @@
 
 void dump_mcs51_sfr( void );
 void dump_xdata_sfr( void );
+void dump_gpio( void );

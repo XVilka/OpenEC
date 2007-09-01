@@ -76,6 +76,15 @@ static struct
 
 void cursors_init( void )
 {
+    /* KEY_OUT_n is not input */
+    GPIOIE10 &= ~0xe0;
+
+    /* KEY_OUT_n default is high */
+    GPIOOD10 |= 0xe0;
+
+    /* KEY_OUT_n enable pull up */
+    GPIOPU10 |= 0xe0;
+
     /* KEY_OUT_n is output */
     GPIOOE10 |= 0xe0;
 

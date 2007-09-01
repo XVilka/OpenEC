@@ -27,6 +27,9 @@
 //! some mcs51 have unified memory
 /*! can execute code from xdata and code memory.
     This seems not to be the case for the kb3700
+    (although the data sheet section 4.12 says
+    "the 8051 uses MOVX and MOVC instructions to read [..] XRAM [..]"
+    Maybe there is a bit to turn this on?)
  */
 #define UNIFIED_MEMORY (0)
 
