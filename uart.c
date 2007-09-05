@@ -27,47 +27,7 @@
 
 #define BITBANG (1)
 
-#if !BITBANG || !defined(SDCC)
-void putchar(unsigned char c)
-{
-    volatile unsigned int t = 1000; /**< no endless loop for now
-                                         (later there's a watchdog so
-                                         endless loops are not bad per se) */
-
-    while( !TI && --t )
-        ;
-    SBUF = c;
-}
-
-
-void uart_init()
-{
-    GPIOFS00 |=  0x40; /**< switch to alternate output for TX */
-    GPIOFS00 &= ~0x80; /**< no alternate output for RX */
-
-    GPIOOE00 |=  0x40; /**< output enable for TX */
-    GPIOOE00 &= ~0x80; /**< no output enable for RX */
-
-    GPIOIE00 &= ~0x40; /**< TX is not input */
-    GPIOIE00 |=  0x80; /**< RX is input */
-
-    GPIOMISC |=  0x01; /**< GPIO06 is E51_TXD */
-    GPIOMISC &= ~0x02; /**< GPIO07 is not E51_CLK */
-
-    SCON  = 0x52;      /**< not unusual */
-    SCON2 = 0x9e;      /**< something */
-    SCON3 = 0x9f;      /**< dont care for now */
-
-// And now for the desparate part:
-// switch on timers that might be used just to get
-// uart running with _any_ speed. Remove!
-TMOD = 0x11;
-TR0 = 1;
-TR1 = 1;
-}
-
-#else
-
+#if BITBANG && defined(SDCC)
 
 void putchar(unsigned char c)
 {
@@ -135,6 +95,56 @@ void uart_init()
     GPIOD00  |=  0x40; /**< set TX high */
     GPIOOE00 |=  0x40; /**< output enable for TX */
 }
+
+#elif !BITBANG && defined (SDCC)
+
+void putchar(unsigned char c)
+{
+    volatile unsigned int t = 1000; /**< no endless loop for now
+                                         (later there's a watchdog so
+                                         endless loops are not bad per se) */
+
+    while( !TI && --t )
+        ;
+    SBUF = c;
+}
+
+void uart_init()
+{
+    GPIOFS00 |=  0x40; /**< switch to alternate output for TX */
+    GPIOFS00 &= ~0x80; /**< no alternate output for RX */
+
+    GPIOOE00 |=  0x40; /**< output enable for TX */
+    GPIOOE00 &= ~0x80; /**< no output enable for RX */
+
+    GPIOIE00 &= ~0x40; /**< TX is not input */
+    GPIOIE00 |=  0x80; /**< RX is input */
+
+    GPIOMISC |=  0x01; /**< GPIO06 is E51_TXD */
+    GPIOMISC &= ~0x02; /**< GPIO07 is not E51_CLK */
+
+    SCON  = 0x52;      /**< not unusual */
+    SCON2 = 0x9e;      /**< something */
+    SCON3 = 0x9f;      /**< dont care for now */
+
+// And now for the desparate part:
+// switch on timers that might be used just to get
+// uart running with _any_ speed. Remove!
+TMOD = 0x11;
+TR0 = 1;
+TR1 = 1;
+}
+
+#else 
+
+/* gcc and others use their putchar() for now */
+//void putchar(unsigned char c){}
+
+/* dummy */
+void uart_init()
+{
+}
+
 #endif
 
 
