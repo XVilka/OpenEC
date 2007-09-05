@@ -35,7 +35,7 @@
 /* see also: http://www.ibutton.com/
  */
 
-#define FLAG_BUSY  (0x80) /* defining flags */
+#define FLAG_BUSY  (0x80)
 #define FLAG_RESET (0x40)
 #define FLAG_WRITE (0x20)
 #define TRANSFER_BUSY (transfer_state & FLAG_BUSY)
@@ -43,7 +43,7 @@
 static volatile
 enum
 {
-    T_STATE_INIT_WRITE = 0xe0 | 7,   /*masking*/
+    T_STATE_INIT_WRITE = 0xe0 | 7,
     T_STATE_INIT_READ  = 0xc0 | 7,
     T_STATE_READ       = 0x80 | 0x18 | 0x07,
     T_STATE_WRITE      = 0xa0 | 0x08 | 0x07,
@@ -52,7 +52,7 @@ enum
 
 static volatile unsigned char transfer_byte;
 
-//! timings for DS2756 from data sheet (050806) Pag 3 of 26
+//! timings for DS2756 from data sheet (050806)
 #define T_REC_MIN   (  1)
 #define T_LOW0_MIN  ( 60)
 #define T_LOW1_MIN  (  1)
@@ -64,7 +64,7 @@ static volatile unsigned char transfer_byte;
 #define T_SLOT_MIN  ( 60)
 #define T_SLOT_MAX  (120)
 
-//! the timings we actually use (why they are different?)
+//! the timings we actually use
 #define T_REC_USED   (T_REC_MIN  + 1)
 #define T_LOW0_USED  (T_LOW0_MIN + 1)
 #define T_LOW1_USED  (T_LOW1_MIN + 1)
@@ -78,16 +78,14 @@ static volatile unsigned char transfer_byte;
 #define T_PDL_AFTER_SAMPLE_USED   (T_PDL_MAX - T_PDL_BEFORE_SAMPLE_USED + 1)
 #define T_TIME_SLOT_USED (100)
 
-//! bit mask for the 1-wire line (DQ)
+//! bit mask for the 1-wire line
 #define DQ (0x04)
 
 //! \warning protect accesses to GPIOD00
 /*! see http://en.wikipedia.org/wiki/Atomic_operation */
-#define DQ_HIGH() do {GPIOED0 |=  DQ;} while(0) /*high DQ 
-masking*/
-#define DQ_LOW()  do {GPIOED0 &= ~DQ;} while(0) /*low DQ 
-masking*/
-#define DQ_IS_HIGH   (GPIOEIN0 & DQ) /*DQ is high Pin3 KB3700*/
+#define DQ_HIGH() do {GPIOED0 |=  DQ;} while(0)
+#define DQ_LOW()  do {GPIOED0 &= ~DQ;} while(0)
+#define DQ_IS_HIGH   (GPIOEIN0 & DQ)
 #define DQ_IS_LOW    (!DQ_IS_HIGH)
 
 #define GPIOD00_ATOMIC_ON()  do{ TIMER1_IRQ_DISABLE(); } while (0)
