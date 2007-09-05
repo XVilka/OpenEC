@@ -7,8 +7,8 @@
 ; KB3700 Keyboard Controller Datasheet Revision 0.1
 ;
 
-Z 0-F3FF
-T FF00-FFFC
+Z 0-F2FF
+T F300-F3FF
 B FFFC-FFFF
 
 # f400
@@ -19,9 +19,9 @@ B FFFC-FFFF
 # fc00 Special Function Registers 0xfc00..0xffff (xdata memory)
 # fc00
 
-# ff00
-# ff00 Build Strings (code memory)
-# ff00
+# f300
+# f300 Build Strings (code memory)
+# f300
 
 # fffc
 # fffc Checksum (code memory)

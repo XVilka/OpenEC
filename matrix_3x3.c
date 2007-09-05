@@ -89,7 +89,7 @@ void cursors_init( void )
     GPIOOE10 |= 0xe0;
 
     /* KEY_IN_n is input */
-    *(volatile unsigned char __xdata *)0xfc64 |= 0x70;  /* avoiding name clash, GPIOEIN0 */
+    GPIOEIN0_0xfc64 |= 0x70;  /* avoiding name clash, GPIOEIN0 */
 }
 
 

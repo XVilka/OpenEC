@@ -230,8 +230,8 @@ SFRX(GPIOIE00,  0xfc60);        /**< Input Enable */
 SFRX(GPIOIE08,  0xfc61);
 SFRX(GPIOIE10,  0xfc62);
 SFRX(GPIOIE18,  0xfc63);
-//SFRX(GPIOEIN0,  0xfc64);      /**< name clash within table 4.2.1 */
-//SFRX(GPIOEIN8,  0xfc65);      /**< name clash within table 4.2.1 */
+SFRX(GPIOEIN0_0xfc64,  0xfc64);      /**< name clash within table 4.2.1 */
+SFRX(GPIOEIN8_0xfc65,  0xfc65);      /**< name clash within table 4.2.1 */
 //SFRX(GPIAD0,    0xfc66);      /**< GPIADIE or GPIAD0? */
 
 SFRX(GPIOMISC,  0xfc70);

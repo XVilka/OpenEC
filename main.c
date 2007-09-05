@@ -27,14 +27,52 @@
    OLPC (One Laptop Per Child) Project. http://www.laptop.org
 
    \section Tools Tools used
-    - sdcc 2.7.0, http://sdcc.sf.net    (Compiler)
-    - doxygen, http://www.doxygen.org   (Source documentation tool)
-    - srecord, http://srecord.sf.net    (Handling of hex (etc.) files)
-    - make                              (GNU make, should be there anyway)
-    - gcc                               (Source is also compilable with GCC)
-    - xxx                               (Software to download to target)
-    - xxx                               (Hardware adapter to download to target)
-    - XO B2..By                         (XO Hardware version this code targets)
+
+     \subsection Compiler Compiler
+      - sdcc 2.7.0 or later (needed), http://sdcc.sf.net
+        (Compiler which generates the binary for the EC)
+      - gcc (optional)
+        (Compiler, the source is also compilable with GCC)
+
+     \subsection Documentation Source Documentation
+     - doxygen (optional), http://www.doxygen.org
+       (Source documentation tool)
+     - LaTeX (optional),
+       (needed if a pdf version of the documentation should be generated.
+       (a html version can be generated without LaTeX))
+
+     \subsection Srecord Srecord
+     - srecord (needed), http://srecord.sf.net
+       (Handling of hex (etc.) files)
+
+     \subsection Make Make
+     - make (needed)
+       (GNU make, should be there anyway.)
+
+     \subsection Disassembler Disassembler
+     - d52 (optional) http://www.8052.com/users/disasm/
+       (Disassembler, generates disassembled file openec.d52)
+
+     \subsection DownloadSoftware Download software
+     - spiflash.dic (needed)  http://lists.laptop.org/pipermail/openec/2007-August/000061.html
+       (Forth software to download the EC firmware to the target)
+
+     \subsection Hardware Hardware adapter
+     - serial adapter (needed) http://wiki.laptop.org/go/Image:Serial_adapter.jpg
+       (Hardware adapter to download to target. Connects to CN24 and an RS232 null-modem cable
+       (an additional oscillator is needed (66MHz(?) to CN24,Pin5)))
+       Additional instructions are at:
+       http://wiki.laptop.org/go/SPI_FLASH_Recovery
+       (the instructions there address recovery of the complete flash)
+     - Recovery Mode jumper block (see above)
+
+     \subsection TerminalSoftware Terminal software
+     - minicom (recommended)
+       (parameters 115kBaud, 8N1, no handshake - other terminal programs can be used too)
+
+     \subsection HardwareRev XO Hardware Revision
+     - XO B1..By (needed)
+      (XO Hardware Revision this code targets.)
 
    \section Related_Docu Related documentation
    http://wiki.laptop.org/go/Category.EC
@@ -43,6 +81,7 @@
    http://dev.laptop.org/attachment/ticket/477/SCHEMATIC1%20_%2012%20--%20EC%20KB3700.pdf
 
    Collection of Datasheets:
+   ToBeDone
 
    \section Mailing_List Mailing list
    http://lists.laptop.org/pipermail/openec/
@@ -316,6 +355,9 @@ void handle_debug(void)
 void startup_message(void)
 {
     putstring("\r\nHello World!\r\n");
+#ifdef __GNUC__
+    putstring("GCC " __VERSION__ "\r\n");
+#endif
     putstring(name_string);
     putspace();
     putstring(version_string);

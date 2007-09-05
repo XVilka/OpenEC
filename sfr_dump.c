@@ -123,7 +123,7 @@ static ec_gpio_type __code ec_gpio[] =
     { 0x2b,  0, "",                     "?",              "?" },
     { 0x2c, 49, "SPIWP#",               "?",              "?" },
     { 0x2d, 50, "DCON_EN",              "?",              "?" },
-    { 0x2e, 51, "T188",                 "?",              "?" },
+    { 0x2e, 51, "T188(B1,WLAN,41)",     "?",              "?" },
     { 0x2f, 52, "ECPWRRQST",            "?",              "?" },
 
     { 0x30, 38, "TEMP",                 "?",              "?" },
@@ -185,7 +185,11 @@ void dump_xdata_sfr( void )
             if( (k & 0x03) == 0)
                 putspace();
             putspace();
+#if defined(SDCC)
             puthex( *(ec_range[i].address + k) );
+#else
+            puthex( 0xff );
+#endif
         }
     }
 }

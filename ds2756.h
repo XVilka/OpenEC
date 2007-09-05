@@ -1,7 +1,7 @@
 /*-------------------------------------------------------------------------
    ds2756.h - handle Maxim/Dallas DS2756
 
-   Copyright (C) 2007  
+   Copyright (C) 2007  Frieder Ferlemann <Frieder.Ferlemann AT web.de>
 
    This program is free software; you can redistribute it and/or modify it
    under the terms of the GNU General Public License as published by the
@@ -22,6 +22,11 @@
    what you give them.   Help stamp out software-hoarding!
 -------------------------------------------------------------------------*/
 
+/*
+   Status: committed "as is".
+ */
+
+
 #include <stdbool.h>
 #include "kb3700.h"
 
@@ -41,8 +46,29 @@ typedef struct data_ds2756_type{
          unsigned int eeprom_host_has_a_request:1;
          unsigned int eeprom_request_is_a_write:1;
          unsigned int eeprom_ec_completed_request:1;
+
+         union
+         {
+             // as sent to host?
+             unsigned char c;
+
+             struct
+             {
+                 unsigned int internal_error:1;
+                 unsigned int busy_wait:1;
+                 unsigned int illegal_write:1;
+                 unsigned int crc_fail:1;
+
+                 unsigned int no_device:1;
+                 unsigned int no_device_flag_is_invalid:1;
+                 unsigned int line_stuck_low:1;
+                 unsigned int line_stuck_high:1;
+             };
+         } error;
        };
 
 extern struct data_ds2756_type __xdata data_ds2756;
+
+
 
 bool handle_ds2756(void);

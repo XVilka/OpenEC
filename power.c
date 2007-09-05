@@ -87,7 +87,7 @@ static struct
 void power_init(void)
 {
     /*! POWER_BUTTON# is input */
-    *(volatile unsigned char __xdata *)0xfc64 |= 0x80;  /* avoiding name clash, GPIOEIN0 */
+    GPIOEIN0_0xfc64 |= 0x80;  /* avoiding name clash, GPIOEIN0 */
 
     /*! all outputs to off before enabling them as output */
     SWITCH_DCON_EN_OFF;
