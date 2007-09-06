@@ -33,7 +33,7 @@
 #include "power.h"
 
 /* Might be dangerous */
-#define ENABLE_OUTPUTS (1)
+#define ENABLE_OUTPUTS (0)
 
 
 #define SWITCH_MAIN_ON_ON    do{GPIOD18 |=  0x04;}while(0)  /* GPIO1A */
