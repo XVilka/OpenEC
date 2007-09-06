@@ -205,7 +205,7 @@ void dump_gpio( void )
 {
     unsigned char i,k;
 
-    putstring( "\r\nName   EC_name           I/O alt_input/alt_output" );
+    putstring( "\r\nName       EC_name           I/O alt_input/alt_output" );
 
     for( i=0; i<sizeof ec_gpio / sizeof ec_gpio[0]; i++ )
     {
@@ -223,6 +223,10 @@ void dump_gpio( void )
            putchar( 'A' );
            puthex( i+0xa0 );
         }
+        putchar('(');
+        putchar('0' + ec_gpio[i].pin/10);
+        putchar('0' + ec_gpio[i].pin%10);
+        putchar(')');
         putspace();
 
         k = putstring( ec_gpio[i].ec_name );
