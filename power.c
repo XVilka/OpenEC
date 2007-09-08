@@ -36,11 +36,9 @@
 #define ENABLE_OUTPUTS (0)
 
 
-#define SWITCH_MAIN_ON_ON    do{GPIOD18 |=  0x04;}while(0)  /* GPIO1A */
-#define SWITCH_MAIN_ON_OFF   do{GPIOD18 &= ~0x04;}while(0)
+#define IS_MAIN_ON    (GPIOD18 & 0x04)
 
-#define SWITCH_SUS_ON_ON     do{GPIOD18 |=  0x08;}while(0)  /* GPIO1B */
-#define SWITCH_SUS_ON_OFF    do{GPIOD18 &= ~0x08;}while(0)
+#define IS_SUS_ON     (GPIOD18 & 0x08)
 
 #define SWITCH_ECPWRRQST_ON  do{GPIOED8 |=  0x80;}while(0)  /* GPIOEF */
 #define SWITCH_ECPWRRQST_OFF do{GPIOED8 &= ~0x80;}while(0)
@@ -104,6 +102,10 @@ void power_init(void)
     /*! ACIN is input */
 //    GPIADIE0 |= 0x04;
 
+    /*! MAIN_ON, SUS_ON are input */
+    GPIOIE18 |= 0x0c;
+
+
     /*! all outputs to off before enabling them as output */
     SWITCH_VR_ON_OFF;
     SWITCH_DCON_EN_OFF;
@@ -111,7 +113,6 @@ void power_init(void)
     SWITCH_WLAN_OFF;
     SWITCH_SWI_OFF;
     SWITCH_PWR_BUT_OFF;
-    SWITCH_MAIN_ON_OFF;
 
 #if ENABLE_OUTPUTS
 # warning ENABLE_OUTPUTS might be dangerous!
@@ -124,9 +125,6 @@ void power_init(void)
 
     /*! PWR_BUT# is output */
     //GPIOOE08 |= 0x10;
-
-    /*! MAIN_ON, SUS_ON is output */
-    GPIOOE18 |= 0x0c;   // <------ ec-dump.fth shows 0x01 here!!!
 
 #endif
 
@@ -208,7 +206,7 @@ void handle_power(void)
             break;
 
         case XO_SWITCH_ON_2:
-            SWITCH_SUS_ON_ON;
+//            SWITCH_SUS_ON_ON;
             power_private.state = XO_SWITCH_ON_3;
             break;
 
@@ -218,7 +216,7 @@ void handle_power(void)
             break;
 
         case XO_SWITCH_ON_4:
-            SWITCH_MAIN_ON_ON;
+//            SWITCH_MAIN_ON_ON;
             power_private.state = XO_SWITCH_ON_5;
             break;
 
@@ -273,7 +271,7 @@ void handle_power(void)
             break;
 
         case XO_SWITCH_TO_SUSPEND:
-            SWITCH_MAIN_ON_OFF;
+ //           SWITCH_MAIN_ON_OFF;
             power_private.state = XO_SUSPEND;
             break;
 
@@ -323,11 +321,10 @@ void handle_power(void)
 
         case XO_SWITCH_OFF_2:
         case XO_EMERGENCY_OFF:
-            SWITCH_MAIN_ON_OFF;
             SWITCH_DCON_EN_OFF;
-            SWITCH_SUS_ON_OFF;
             SWITCH_WLAN_OFF;
-// SWITCH_PWR_BUT_OFF;
+            SWITCH_VR_ON_OFF;
+ // SWITCH_PWR_BUT_OFF;
 // SWITCH_ECPWRRQST_OFF;
 // SWITCH_SWI_OFF;
 

@@ -21,6 +21,13 @@
    You are forbidden to forbid anyone else to use, share and improve
    what you give them.   Help stamp out software-hoarding!
 -------------------------------------------------------------------------*/
+
+/*
+   The code and data here uses about 3 kByte.
+   Most likely it will not be part of the final firmware.
+ */
+
+
 #include <stdbool.h>
 #include "kb3700.h"
 #include "uart.h"
@@ -29,33 +36,33 @@
 typedef struct
 {
     unsigned char __code *name;
-    unsigned char __code *address;
+    unsigned char __xdata *address;
     unsigned char len;
 } ec_range_type;
 
 
 static ec_range_type __code ec_range[] =
 {
-    { "GPIOO",  (unsigned char __code *)0xfc00, 0x04 },
-    { "GPIOE",  (unsigned char __code *)0xfc10, 0x06 },
-    { "GPIOD",  (unsigned char __code *)0xfc20, 0x06 },
-    { "GPIOIN", (unsigned char __code *)0xfc30, 0x07 },
-    { "GPIOPU", (unsigned char __code *)0xfc40, 0x06 },
-    { "GPIOOD", (unsigned char __code *)0xfc50, 0x04 },
-    { "GPIOIE", (unsigned char __code *)0xfc60, 0x07 },
-    { "GPIOM",  (unsigned char __code *)0xfc70, 0x01 },
-    { "KBC",    (unsigned char __code *)0xfc80, 0x07 },
-    { "PWM",    (unsigned char __code *)0xfe00, 0x0e },
-    { "GPT",    (unsigned char __code *)0xfe50, 0x0a },
-    { "WDT",    (unsigned char __code *)0xfe80, 0x06 },
-    { "LPC",    (unsigned char __code *)0xfe90, 0x10 },
-    { "SPI",    (unsigned char __code *)0xfea0, 0x10 },
-    { "PS2",    (unsigned char __code *)0xfee0, 0x07 },
-    { "EC",     (unsigned char __code *)0xff00, 0x20 },
-    { "GPWUEN", (unsigned char __code *)0xff30, 0x04 },
-    { "GPWUPF", (unsigned char __code *)0xff40, 0x04 },
-    { "GPWUPS", (unsigned char __code *)0xff50, 0x04 },
-    { "GPWUEL", (unsigned char __code *)0xff60, 0x04 },
+    { "GPIOO",  (unsigned char __xdata *)0xfc00, 0x04 },
+    { "GPIOE",  (unsigned char __xdata *)0xfc10, 0x06 },
+    { "GPIOD",  (unsigned char __xdata *)0xfc20, 0x06 },
+    { "GPIOIN", (unsigned char __xdata *)0xfc30, 0x07 },
+    { "GPIOPU", (unsigned char __xdata *)0xfc40, 0x06 },
+    { "GPIOOD", (unsigned char __xdata *)0xfc50, 0x04 },
+    { "GPIOIE", (unsigned char __xdata *)0xfc60, 0x07 },
+    { "GPIOM",  (unsigned char __xdata *)0xfc70, 0x01 },
+    { "KBC",    (unsigned char __xdata *)0xfc80, 0x07 },
+    { "PWM",    (unsigned char __xdata *)0xfe00, 0x0e },
+    { "GPT",    (unsigned char __xdata *)0xfe50, 0x0a },
+    { "WDT",    (unsigned char __xdata *)0xfe80, 0x06 },
+    { "LPC",    (unsigned char __xdata *)0xfe90, 0x10 },
+    { "SPI",    (unsigned char __xdata *)0xfea0, 0x10 },
+    { "PS2",    (unsigned char __xdata *)0xfee0, 0x07 },
+    { "EC",     (unsigned char __xdata *)0xff00, 0x20 },
+    { "GPWUEN", (unsigned char __xdata *)0xff30, 0x04 },
+    { "GPWUPF", (unsigned char __xdata *)0xff40, 0x04 },
+    { "GPWUPS", (unsigned char __xdata *)0xff50, 0x04 },
+    { "GPWUEL", (unsigned char __xdata *)0xff60, 0x04 },
 };
 
 
@@ -140,15 +147,18 @@ static ec_gpio_type __code ec_gpio[] =
 };
 
 
-void dump_mcs51_sfr( void )
+//! dumps SFR registers and data memory 
+void dump_mcs51( void )
 {
-    unsigned char i = 0x80;
+    unsigned char i = 0x00;
 
     do
     {
         if( (i & 0x07) == 0)
         {
-            putstring( "\r\nSFR " );
+            putstring( i & 0x80 ? 
+                       "\r\nSFR " : 
+                       "\r\nDATA " );
             puthex( i );
             putchar(':');
         }
@@ -158,10 +168,15 @@ void dump_mcs51_sfr( void )
                 putspace();
         }
         putspace();
-        puthex( read_mcs51_sfr( i++ ) );
-
-    } while( (unsigned char)i );
-
+#if defined(SDCC)
+        puthex( i & 0x80 ? 
+                read_mcs51_sfr( i ) : 
+                *(unsigned char __idata *) i );
+#else
+        puthex(0xff);
+#endif
+        i++;
+    } while( i );
 
 }
 
@@ -172,7 +187,7 @@ void dump_xdata_sfr( void )
 {
     unsigned char i,k;
 
-    for( i=0; i<sizeof ec_range / sizeof ec_range[0]; i++ )
+    for( i=0; i != sizeof ec_range / sizeof ec_range[0]; i++ )
     {
         putstring( "\r\n" );
         k = putstring( ec_range[i].name );
@@ -205,9 +220,9 @@ void dump_gpio( void )
 {
     unsigned char i,k;
 
-    putstring( "\r\nName       EC_name           I/O alt_input/alt_output" );
+    putstring( "\r\nName  Pin  EC_name           I/O alt_input/alt_output" );
 
-    for( i=0; i<sizeof ec_gpio / sizeof ec_gpio[0]; i++ )
+    for( i=0; i != sizeof ec_gpio / sizeof ec_gpio[0]; i++ )
     {
         if( !ec_gpio[i].pin )
             continue;
@@ -257,5 +272,46 @@ void dump_gpio( void )
             putstring( ec_gpio[i].alt_out_name );
             putchar( k ? ' ' : ')' );
         }
+    }
+}
+
+
+//! this function checks if IO pins are inadvertedly set to output
+/*! setting of the output enable SFRw is checked against the values
+    from ec-dump.fth
+    If a pin is set to output that is not expected to be an output
+    this function halts.
+ */
+void gpio_check_IO_direction(void)
+{
+    #define EC_DUMP_0xFC10_Q2C25_B4 { 0x87, 0xd7, 0xfe, 0x01, 0x0f, 0xbd }
+    #define EC_DUMP_0xFC10_Q2C23_B1 { 0x87, 0xd7, 0xfe, 0x01, 0x0b, 0xbd }
+
+    /*! See "[Openec] Uart TX HiZ?" 
+        http://lists.laptop.org/pipermail/openec/2007-August/000042.html */
+    #define GPIOOE00_SPECIAL (0x40)
+
+    const unsigned char __code ec_dump_0xfc10[6] = EC_DUMP_0xFC10_Q2C23_B1;
+
+    if( (GPIOOE00 & (unsigned char)~ec_dump_0xfc10[0]) & (unsigned char)~GPIOOE00_SPECIAL |
+        (GPIOOE08 & (unsigned char)~ec_dump_0xfc10[1]) |
+        (GPIOOE10 & (unsigned char)~ec_dump_0xfc10[2]) |
+        (GPIOOE18 & (unsigned char)~ec_dump_0xfc10[3]) |
+        (GPIOEOE0 & (unsigned char)~ec_dump_0xfc10[4]) |
+        (GPIOEOE8 & (unsigned char)~ec_dump_0xfc10[5]) )
+    {
+        /* disabling almost all outputs again. */
+        GPIOOE00 = 0x40; /* leave UART TX as output */
+        GPIOOE08 = 0x00;
+        GPIOOE10 = 0x00;
+        GPIOOE18 = 0x00;
+        GPIOEOE0 = 0x00;
+        GPIOEOE8 = 0x00;
+
+        putstring("\r\nunexpected IO dir - halting.");
+
+        /* lock */
+        while(1)
+            ;
     }
 }

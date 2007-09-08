@@ -22,6 +22,7 @@
    what you give them.   Help stamp out software-hoarding!
 -------------------------------------------------------------------------*/
 
-void dump_mcs51_sfr( void );
+void dump_mcs51( void );
 void dump_xdata_sfr( void );
 void dump_gpio( void );
+void gpio_check_IO_direction( void );

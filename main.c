@@ -333,7 +333,7 @@ void handle_debug(void)
         my_game_key_status[0] ^= 0x02;
         if( my_game_key_status[0] & 0x02)
         {
-            dump_mcs51_sfr();
+            dump_mcs51();
             dump_xdata_sfr();
         }
     }
@@ -391,9 +391,10 @@ void main (void)
 
     startup_message();
 
-    dump_mcs51_sfr();
     dump_xdata_sfr();
+    gpio_check_IO_direction();
     dump_gpio();
+    dump_mcs51();
 
     print_states_ruler();
     print_states();
