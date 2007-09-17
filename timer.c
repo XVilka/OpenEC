@@ -23,6 +23,7 @@
 -------------------------------------------------------------------------*/
 #include <stdbool.h>
 #include "kb3700.h"
+#include "power.h"
 #include "watchdog.h"
 #include "timer.h"
 
@@ -129,6 +130,8 @@ void timer_gpt3_interrupt(void) __interrupt(0x17)
             watchdog_all_up_and_well = 0x00;
         }
     }
+
+    busy = 1;
 }
 
 

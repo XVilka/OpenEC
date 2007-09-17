@@ -277,36 +277,54 @@ void dump_gpio( void )
 
 
 //! this function checks if IO pins are inadvertedly set to output
-/*! setting of the output enable SFRw is checked against the values
+/*! setting of the output enable SFRs is checked against the values
     from ec-dump.fth
     If a pin is set to output that is not expected to be an output
     this function halts.
+
+    Note, if an alternate function is set (GPIOFSxx) then a pin
+    probably is an output without output enable (GPIOOExx) being set.
+    This is not yet handled.
+
+    (Also this function cannot react instantly on pins wrongly set
+    to output (and of potentially illegal output combinations
+    (if these exist)))
  */
 void gpio_check_IO_direction(void)
 {
     #define EC_DUMP_0xFC10_Q2C25_B4 { 0x87, 0xd7, 0xfe, 0x01, 0x0f, 0xbd }
     #define EC_DUMP_0xFC10_Q2C23_B1 { 0x87, 0xd7, 0xfe, 0x01, 0x0b, 0xbd }
 
-    /*! See "[Openec] Uart TX HiZ?" 
-        http://lists.laptop.org/pipermail/openec/2007-August/000042.html */
-    #define GPIOOE00_SPECIAL (0x40)
-
     const unsigned char __code ec_dump_0xfc10[6] = EC_DUMP_0xFC10_Q2C23_B1;
 
-    if( (GPIOOE00 & (unsigned char)~ec_dump_0xfc10[0]) & (unsigned char)~GPIOOE00_SPECIAL |
+    if( (GPIOOE00 & (unsigned char)~ec_dump_0xfc10[0]) |
         (GPIOOE08 & (unsigned char)~ec_dump_0xfc10[1]) |
         (GPIOOE10 & (unsigned char)~ec_dump_0xfc10[2]) |
         (GPIOOE18 & (unsigned char)~ec_dump_0xfc10[3]) |
         (GPIOEOE0 & (unsigned char)~ec_dump_0xfc10[4]) |
         (GPIOEOE8 & (unsigned char)~ec_dump_0xfc10[5]) )
     {
-        /* disabling almost all outputs again. */
-        GPIOOE00 = 0x40; /* leave UART TX as output */
+        /* disabling outputs again. */
+        GPIOOE00 = 0x00;
         GPIOOE08 = 0x00;
         GPIOOE10 = 0x00;
         GPIOOE18 = 0x00;
         GPIOEOE0 = 0x00;
         GPIOEOE8 = 0x00;
+
+        /* disabling almost all special functions */
+        GPIOFS00 = 0x40; /* leave UART TX as output */
+        GPIOFS08 = 0x00;
+        GPIOFS10 = 0x00;
+        GPIOFS18 = 0x00;
+
+        /* and no pull up either */
+        GPIOPU00 = 0x00;
+        GPIOPU08 = 0x00;
+        GPIOPU10 = 0x00;
+        GPIOPU18 = 0x00;
+        GPIOEPU0 = 0x00;
+        GPIOEPU8 = 0x00;
 
         putstring("\r\nunexpected IO dir - halting.");
 

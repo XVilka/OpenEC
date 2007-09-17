@@ -1,5 +1,5 @@
 /*-------------------------------------------------------------------------
-   power.h - handle power button on the EC
+   monitor.h - simple monitor
 
    Copyright (C) 2007  Frieder Ferlemann <Frieder.Ferlemann AT web.de>
 
@@ -22,12 +22,4 @@
    what you give them.   Help stamp out software-hoarding!
 -------------------------------------------------------------------------*/
 
-#define LED_PWR_OFF    do{GPIOD08 |=  0x02;}while(0)
-#define LED_PWR_ON     do{GPIOD08 &= ~0x02;}while(0)
-
-extern bool busy;
-extern bool may_sleep;
-
-void power_init(void);
-
-void handle_power(void);
+void monitor();

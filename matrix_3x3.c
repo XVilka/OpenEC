@@ -80,6 +80,11 @@ void cursors_init( void )
     GPIOIE10 &= ~0xe0;
 
     /* KEY_OUT_n default is high */
+    GPIOD10 |= 0xe0;
+
+    /* KEY_OUT_n open drain enable. Warning KEY_OUT_3 is also used for ISP_CLK
+       so if the serial debricking adapter is connected output drivers work
+       against each others with a duty cycle of 1/6 */
     GPIOOD10 |= 0xe0;
 
     /* KEY_OUT_n enable pull up */

@@ -95,6 +95,7 @@
 #include "battery.h"
 #include "build.h"
 #include "matrix_3x3.h"
+#include "monitor.h"
 #include "power.h"
 #include "port_0x6c.h"
 #include "sfr_dump.h"
@@ -110,20 +111,6 @@
 #define LED_CHG_R_OFF do{GPIOD08 |=  0x04;}while(0)
 #define LED_CHG_R_ON  do{GPIOD08 &= ~0x04;}while(0)
 
-
-//! This is set by an interrupt routine or a state machine
-/*! Value is reset during each iteration of the main loop.
-    \see may_sleep
- */
-bool busy;
-
-
-//! This is kind of "not busy" 
-/*! It's value is expected to persevere for more than one 
-    iteration of the main loop. Currently not in use?
-    \see busy
- */
-bool may_sleep = 0;
 
 unsigned char __xdata board_id;
 
@@ -143,11 +130,37 @@ unsigned char _sdcc_external_startup(void)
     PCON2 |= 0x11;      /**< Enable external space write. Enable idle loop no fetching instr. */
     XBICFG = 0x64;      /**< as dumped by ec-dump.fth */
     XBICS |= 0x30;      /**< bit 5 as dumped by ec-dump.fth, Enable Reset 8051 and XBI Segment Setting */
-    SPICFG |= 0x04;     /**< bit 2 as dumped by ec-dump.fth */
+#if 1
+    CLKCFG = 0x94;      /**< as dumped by ec-dump.fth */
+#else
+    CLKCFG = 0xd4;      /**< WARNING: setting bit 6 here is out of specification for
+                             the Spansion S25FL008A. It is unstable here yet it worked long enough
+                             so I could see that it results in a speed increase of about 46%
+                             (unrepresentative benchmark).
+                             If the XO waits on the EC the increased speed can translate
+                             into powersavings */
+#endif
+    SPICFG = 0x04;      /**< bit 2 as or not as dumped by ec-dump.fth. Not sure how this bit should be set.
+                             It relates to FAST_READ of the SPI flash. The clock frequency I'm seeing
+                             at pin 6 of the flash (30MHz) would not require the FAST_READ mode.
+                             So likely the dummy byte which is additionally transmitted for FAST_READ
+                             can be avoided (40# instead of 48#) 
+                             CLKCFG Bit6 would allow to select full/half speed (of internal clock
+                             (66MHz+-25%)). 
+
+                             48# at 66MHz are 727ns, 40# at 33MHz are 1212ns
+
+                             */
     WDTCFG = 0x48;      /**< disable watchdog for now */
     LPCFWH = 0xa0;      /**< as dumped by ec-dump.fth */
     LPCCFG = 0xfd;      /**< as dumped by ec-dump.fth */
-    CLKCFG = 0x94;      /**< as dumped by ec-dump.fth */
+
+    PLLCFG = 0x95;      /**< 0x70 is reset default but results in an initial 
+                             clock of about 29.3 MHz here. (this is too far off
+                             from the expected 32 MHz for the serial 
+                             communication too work)
+                             0x80 gives about 30.9 MHz here.
+                             0x95 is what ec-dump.fth shows */
 
     // LPC_2EF is marked as internal use only but deviates from reset value
 
@@ -283,6 +296,19 @@ void get_board_id(void)
     /* putspace(); puthex_u16(i); putspace(); puthex(ADCDAT); */
 }
 
+//! assumes board_id is properly set
+unsigned char __code * board_id_to_string(void)
+{
+   switch( board_id )
+   {
+      case 0xb1: return "B1";
+      case 0xb2: return "B2";
+      case 0xb3: return "B3";
+      default: return "??";
+   }
+}
+
+
 //! off-load blinking (and off-after-a-while) stuff to non IRQ
 void handle_leds(void)
 {
@@ -308,19 +334,6 @@ void handle_leds(void)
     /* maybe: PMUCFG = 0x53; */ \
 } while(0)
 
-
-//! output a char every second
-void debug_uart_ping(void)
-{
-    static unsigned char __xdata my_s;
-
-    if( my_s != (unsigned char)second )
-    {
-        my_s = (unsigned char)second;
-
-        SBUF = '*';   // For now simply write without caring for TI...
-    }
-}
 
 void handle_debug(void)
 {
@@ -433,18 +446,15 @@ void main (void)
         busy |= handle_cursors();
 //        busy |= handle_battery();
         handle_leds();
-
-//        debug_uart_ping();
+         handle_power();
 
         watchdog_all_up_and_well |= WATCHDOG_MAIN_LOOP_IS_FINE;
 
         print_states();
 
-        handle_power();
+        monitor();
 
-        handle_debug();
-
-        if( !busy && may_sleep )
+        while( !busy && may_sleep )
             SLEEP();
     }
 }

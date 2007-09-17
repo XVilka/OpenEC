@@ -53,6 +53,8 @@
 struct states_type __xdata __at (0xfbc0) states;
 struct states_type __xdata __at (0xfb80) old_states;
 
+unsigned char __pdata print_states_enable;
+
 #define BACKFILL (0xee)
 
 #if defined( SDCC )
@@ -109,6 +111,9 @@ void print_states_ruler (void)
 void print_states (void)
 {
      unsigned char i;
+
+     if( !print_states_enable )
+         return;
 
      putstring("\r\n");
      puthex_u16(states.timestamp);

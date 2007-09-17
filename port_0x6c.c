@@ -21,6 +21,11 @@
    You are forbidden to forbid anyone else to use, share and improve
    what you give them.   Help stamp out software-hoarding!
 -------------------------------------------------------------------------*/
+/*
+   Low level communication routines on the linux side are at:
+   http://dev.laptop.org/git?p=olpc-2.6;a=blob;f=arch/i386/kernel/olpc.c
+ */
+
 #include <stdbool.h>
 #include "kb3700.h"
 #include "battery.h"

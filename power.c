@@ -1,5 +1,5 @@
 /*-------------------------------------------------------------------------
-   power.c - handle power button on the EC
+   power.c - handle power on the EC
 
    Copyright (C) 2007  Frieder Ferlemann <Frieder.Ferlemann AT web.de>
 
@@ -24,6 +24,10 @@
 
 /*
    see http://wiki.laptop.org/go/Hardware_Power_Domains
+   see CS5536 data sheet
+   see http://dev.laptop.org/git?p=olpc-2.6;a=blob;f=arch/i386/kernel/olpc-pm.c
+   see http://dev.laptop.org/ticket/218
+   see http://www.aosmd.com/pdfs/datasheet/AOZ1010.pdf
  */
 
 #include <stdbool.h>
@@ -32,55 +36,83 @@
 #include "timer.h"
 #include "power.h"
 
-/* Might be dangerous */
+/* dangerous! */
 #define ENABLE_OUTPUTS (0)
+#define DIRTY (1)
 
+#define IS_MAIN_ON    (GPIOD18 & 0x04) /* (B1 about 68mm, 108mm)U13,6  CS5536 WORKING? */
+#define IS_SUS_ON     (GPIOD18 & 0x08) /* (B1 near SD-Card)U33,6  CS5536 WORK_AUX? */
 
-#define IS_MAIN_ON    (GPIOD18 & 0x04)
+#define IS_MAIN_ON_AND_SUS_ON ((GPIOD18 & 0x0c) == 0x0c)
+#define IS_MAIN_OFF_AND_SUS_OFF (!(GPIOD18 & 0x0c))
 
-#define IS_SUS_ON     (GPIOD18 & 0x08)
+#define SWITCH_MAIN_ON_PU_ON  do{ GPIOPU18 |=  0x04; }while(0)  /* */
+#define SWITCH_MAIN_ON_PU_OFF do{ GPIOPU18 &= ~0x04; }while(0)  /* */
 
-#define SWITCH_ECPWRRQST_ON  do{GPIOED8 |=  0x80;}while(0)  /* GPIOEF */
+#define SWITCH_ECPWRRQST_ON  do{GPIOED8 |=  0x80;}while(0)  /* GPIOEF (to DCON) */
 #define SWITCH_ECPWRRQST_OFF do{GPIOED8 &= ~0x80;}while(0)
 
-#define SWITCH_PWR_BUT_ON    do{GPIOD08 &= ~0x10;}while(0)  /* GPIO0C# */
+#define SWITCH_PWR_BUT_ON    do{GPIOD08 &= ~0x10;}while(0)  /* GPIO0C# (to CS5536 GPIO28 PWR_BUT#) */
 #define SWITCH_PWR_BUT_OFF   do{GPIOD08 |=  0x10;}while(0)  /* # */
 
 #define SWITCH_DCON_EN_ON    do{GPIOED8 |=  0x20;}while(0)  /* GPIOED */
 #define SWITCH_DCON_EN_OFF   do{GPIOED8 &= ~0x20;}while(0)
 
-#define SWITCH_WLAN_ON       do{GPIOD00 |=  0x02;}while(0)  /* GPIO01 */
+#define SWITCH_WLAN_ON       do{GPIOD00 |=  0x02;}while(0)  /* GPIO01 (B1)U15,6(near WLAN) */
 #define SWITCH_WLAN_OFF      do{GPIOD00 &= ~0x02;}while(0)
 
 #define SWITCH_SWI_ON        do{GPIOD00 &= ~0x04;}while(0)  /* GPIO02# */
 #define SWITCH_SWI_OFF       do{GPIOD00 |=  0x04;}while(0)  /* # */
 
-#define SWITCH_VR_ON_ON      do{GPIOD00 &= ~0x01;}while(0)  /* GPIO00# */
+#define SWITCH_VR_ON_ON      do{GPIOD00 &= ~0x01;}while(0)  /* GPIO00# Q26 (near CN24 and reset switch) */
 #define SWITCH_VR_ON_OFF     do{GPIOD00 |=  0x01;}while(0)  /* # */
 
-#define SWITCH_USB_PWR_ENn_B1B2_ON   do{}while(0) /* ToBeDone (only B1, B2) */
+#define SWITCH_USB_PWR_ENn_B1B2_ON   do{}while(0)           /* ToBeDone */
 #define SWITCH_USB_PWR_ENn_B1B2_OFF  do{}while(0)
+
+#define POWER_BUTTON_PRESSED !(GPIOEIN0 & 0x80)             /* R74 next to SD-Card */
+
+
+//! This is set by an interrupt routine or a state machine
+/*! Value is reset during each iteration of the main loop.
+    \see may_sleep
+ */
+bool busy;
+
+//! This is kind of "not busy"
+/*! It's value is expected to persevere for more than one 
+    iteration of the main loop. Currently not in use?
+    \see busy
+ */
+bool may_sleep = 1;
 
 
 typedef enum
 {
     XO_OFF,
     WAIT_FOR_POWER_BUTTON_RELEASE,
+    XO_POWER_BUTTON_TOO_LONG_FOR_POWER_ON,
     XO_SWITCH_ON_FROM_WAKEUP,
     XO_SWITCH_ON_1,
-    XO_SWITCH_ON_2,
 
+    XO_SWITCH_ON_2,
     XO_SWITCH_ON_3,
     XO_SWITCH_ON_4,
     XO_SWITCH_ON_5,
     XO_RUNNING,
-    XO_IS_IT_SUSPEND,
 
+    XO_IS_IT_SUSPEND,
+    XO_SWITCH_OFF_FROM_RUNNING,
     XO_SUSPEND,
     XO_SWITCH_TO_SUSPEND,
+    SUSPEND_WAIT_FOR_POWER_BUTTON_RELEASE,
+
+    XO_SWITCH_OFF_FROM_SUSPEND,
     XO_SWITCH_OFF_SHORT_BLINK,
     XO_SWITCH_OFF_1,
     XO_SWITCH_OFF_2,
+    XO_MAIN_OR_SUS_ERROR,
+
     XO_EMERGENCY_OFF
 } state;
 
@@ -92,6 +124,174 @@ static struct
     state state;
     unsigned long wakeup_second;
 } __pdata power_private;
+
+#if DIRTY
+
+void power_init(void)
+{
+    /*! POWER_BUTTON# is input */
+    GPIOEIN0_0xfc64 |= 0x80;  /* avoiding name clash, GPIOEIN0 */
+
+    /*! ACIN is input */
+//    GPIADIE0 |= 0x04;
+
+    /*! MAIN_ON, SUS_ON are input */
+    GPIOIE18 |= 0x0c;
+
+
+    /*! all outputs to off before enabling them as output */
+    SWITCH_VR_ON_OFF;
+    SWITCH_DCON_EN_OFF;
+    SWITCH_ECPWRRQST_OFF;
+    SWITCH_WLAN_OFF;
+    SWITCH_SWI_ON;
+    SWITCH_PWR_BUT_OFF;
+
+#if ENABLE_OUTPUTS
+# warning ENABLE_OUTPUTS might be dangerous!
+
+    /*! ECPWRRQST, DCON_EN are output */
+    GPIOEOE8 |= 0xa0;
+
+    /*! VR_ON#, WLAN_EN are output */
+    GPIOOE00 |= 0x03;
+
+    /*! PWR_BUT# is output */
+    GPIOOE08 |= 0x10;
+
+#endif
+
+    /*! notime soon:) */
+    power_private.wakeup_second = 0xFFFFffff;
+    //power_private.wakeup_second = 10;
+}
+
+
+//! Switches On/Off power to the various subsystems
+/*! This one is just a HACK to get things going.
+
+
+    \verbatim
+    approximate power on timing as measured on B1 Q2C23
+
+    VR_ON#      ----__________________________________
+
+    WLAN_EN     __------------------------------------
+
+    SWI#        ____-----------------_________________
+
+    PWR_BUT#    ____-----------------_________________
+
+    MAIN_ON     ____----------------------------------
+
+    SUS_ON      _______________________---------------
+
+
+
+                --+-+----------------+-+-------------->
+                  0 1
+                    0
+
+    \endverbatim
+
+    (WLAN Power on seems very early)
+
+ */
+void handle_power(void)
+{
+    /* do not want to be called twice per tick */
+    if( power_private.my_tick == (unsigned char)tick )
+        return;
+    power_private.my_tick = (unsigned char)tick;
+
+    switch( power_private.state )
+    {
+        case 0:
+            if( POWER_BUTTON_PRESSED )
+            {
+                power_private.timer++;
+                if( power_private.timer == (unsigned char)(HZ/10) )
+                {
+                    LED_PWR_ON;
+                    power_private.state = 1;
+                }
+            }
+            else
+                power_private.timer = 0;
+            break;
+
+        case 1:
+            SWITCH_WLAN_ON;
+            power_private.timer = 0;
+            power_private.state = 2;
+            break;
+
+        case 2:
+            SWITCH_PWR_BUT_OFF;
+            SWITCH_SWI_OFF;
+            SWITCH_VR_ON_ON;
+            SWITCH_MAIN_ON_PU_ON;
+            SWITCH_DCON_EN_ON;
+
+            power_private.timer = 0;
+            power_private.state = 3;
+            break;
+
+        case 3:
+            if( ++power_private.timer == 25 )
+            {
+                SWITCH_PWR_BUT_ON;
+                power_private.timer = 0;
+                power_private.state = 4;
+            }
+            break;
+
+        case 4:
+            if( POWER_BUTTON_PRESSED )
+            {
+                SWITCH_DCON_EN_OFF;
+                SWITCH_WLAN_OFF;
+                LED_PWR_OFF;
+                SWITCH_SWI_ON;
+                SWITCH_PWR_BUT_ON;
+                SWITCH_VR_ON_OFF;
+                SWITCH_MAIN_ON_PU_OFF;
+                power_private.timer = 0;
+                power_private.state = 5;
+            }
+            break;
+
+        case 5:
+            if( !POWER_BUTTON_PRESSED )
+            {
+                power_private.timer = 0;
+                power_private.state = 0;
+            }
+            break;
+    }
+
+    STATES_UPDATE(power, power_private.state);
+}
+
+
+#else
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 void power_init(void)
@@ -124,7 +324,7 @@ void power_init(void)
     GPIOOE00 |= 0x03;
 
     /*! PWR_BUT# is output */
-    //GPIOOE08 |= 0x10;
+    GPIOOE08 |= 0x10;
 
 #endif
 
@@ -177,23 +377,29 @@ void handle_power(void)
             break;
 
         case WAIT_FOR_POWER_BUTTON_RELEASE:
-            if( POWER_BUTTON_PRESSED )
+            if( !POWER_BUTTON_PRESSED )
             {
-                if( power_private.timer != 0xff )
-                    power_private.timer++;
-                if( power_private.timer > (unsigned char)HZ )
-                    LED_PWR_OFF;
+                power_private.state = XO_SWITCH_ON_1 ;
             }
             else
             {
-                /*! only proceed if button was not pressed too long */
-                if( power_private.timer <= (unsigned char)HZ /* longer than 1 second */ )
-                    power_private.state = XO_SWITCH_ON_1 ;
-                else
+                if( ++power_private.timer == (unsigned char)HZ )
                 {
-                    power_private.state = XO_OFF;
                     LED_PWR_OFF;
+                    power_private.state = XO_POWER_BUTTON_TOO_LONG_FOR_POWER_ON;
                 }
+            }
+            break;
+
+        case XO_POWER_BUTTON_TOO_LONG_FOR_POWER_ON:
+            if( !POWER_BUTTON_PRESSED )
+            {
+                power_private.state = XO_OFF;
+            }
+            else
+            {
+                if( power_private.timer != 0xff )
+                    power_private.timer++;
             }
             break;
 
@@ -201,13 +407,22 @@ void handle_power(void)
         case XO_SWITCH_ON_1:
             LED_PWR_ON;
             SWITCH_VR_ON_ON;
+SWITCH_DCON_EN_ON;
+
             power_private.timer = 0;
             power_private.state = XO_SWITCH_ON_2;
             break;
 
         case XO_SWITCH_ON_2:
-//            SWITCH_SUS_ON_ON;
-            power_private.state = XO_SWITCH_ON_3;
+            if( IS_MAIN_ON_AND_SUS_ON )
+            {
+                power_private.state = XO_SWITCH_ON_3;
+            }
+            else
+            {
+                if( ++power_private.timer == (unsigned char)HZ * 2 )
+                    power_private.state = XO_MAIN_OR_SUS_ERROR;
+            }
             break;
 
         case XO_SWITCH_ON_3:
@@ -216,7 +431,6 @@ void handle_power(void)
             break;
 
         case XO_SWITCH_ON_4:
-//            SWITCH_MAIN_ON_ON;
             power_private.state = XO_SWITCH_ON_5;
             break;
 
@@ -230,8 +444,6 @@ void handle_power(void)
             {
                 power_private.state = XO_IS_IT_SUSPEND;
                 power_private.timer = 0;
-
-                /* also tell the host, how? */
             }
             else if ( 0 /* hosts requested power down */ /* hosts requested suspend */)
             {
@@ -240,38 +452,43 @@ void handle_power(void)
             break;
 
         case XO_IS_IT_SUSPEND:
-            if( power_private.timer != 0xff )
-                power_private.timer++;
-
-            if( POWER_BUTTON_PRESSED )
+            if( !POWER_BUTTON_PRESSED )
             {
-                /* pressed for 1 second. */
-                if( power_private.timer >= (unsigned char)HZ  )
-                {
-                    /* tell host power down */
-
-                    power_private.state = XO_SWITCH_OFF_SHORT_BLINK;
-                    power_private.timer = 0;
-                }
-
+                SWITCH_PWR_BUT_OFF;
+                power_private.state = XO_SWITCH_TO_SUSPEND;
             }
             else
             {
-                if( power_private.timer <= (unsigned char)HZ /* not longer than 0.5 second */ )
+                if( ++power_private.timer == (unsigned char)HZ )
                 {
-                    /* also tell the host, how? */
-                    power_private.state = XO_SWITCH_TO_SUSPEND;
-                }
-                else
-                {
-                    power_private.state = XO_SWITCH_OFF_SHORT_BLINK;
+                    /* tell host to power off */
+                    power_private.state = XO_SWITCH_OFF_FROM_RUNNING;
                     power_private.timer = 0;
+                    /* also tell the host, how? */
+                    SWITCH_PWR_BUT_ON; /**< needs to be "pressed" for >=62 us (unfiltered) */
                 }
             }
             break;
 
+
+        case XO_SWITCH_OFF_FROM_RUNNING:
+
+            power_private.state = XO_SWITCH_OFF_SHORT_BLINK;
+            power_private.timer = 0;
+
+#if 0
+            /* southbrigde has turned power off? */
+            if( IS_MAIN_OFF_AND_SUS_OFF )
+            {
+                power_private.state = XO_SWITCH_OFF_SHORT_BLINK;
+                power_private.timer = 0;
+            }
+#endif
+            break;
+
+
         case XO_SWITCH_TO_SUSPEND:
- //           SWITCH_MAIN_ON_OFF;
+            /* dummy */
             power_private.state = XO_SUSPEND;
             break;
 
@@ -282,7 +499,7 @@ void handle_power(void)
             {
                 if( POWER_BUTTON_PRESSED )
                 {
-                    power_private.state = WAIT_FOR_POWER_BUTTON_RELEASE;
+                    power_private.state = SUSPEND_WAIT_FOR_POWER_BUTTON_RELEASE;
                 }
                 else 
                 {
@@ -294,18 +511,36 @@ void handle_power(void)
             }
             break;
 
-        case XO_SWITCH_OFF_SHORT_BLINK:
-            if( power_private.timer != 0xff )
-                power_private.timer++;
 
+        case SUSPEND_WAIT_FOR_POWER_BUTTON_RELEASE:
+            if( !POWER_BUTTON_PRESSED )
+            {
+                power_private.state = XO_SWITCH_ON_1 ;
+            }
+            else
+            {
+                if( ++power_private.timer == (unsigned char)HZ )
+                {
+                    LED_PWR_OFF;
+                    power_private.state = XO_SWITCH_OFF_FROM_SUSPEND;
+                    power_private.timer = 0;
+                }
+            }
+            break;
+
+        case XO_SWITCH_OFF_FROM_SUSPEND:
+        case XO_SWITCH_OFF_SHORT_BLINK:
             if( power_private.timer >= 3 )
                 power_private.state = XO_SWITCH_OFF_1;
             else
+            {
+                power_private.timer++;
                 LED_PWR_ON;
+            }
             break;
 
         case XO_SWITCH_OFF_1:
-            if( 0 /* host acknowleged power down */ )
+            if( IS_MAIN_OFF_AND_SUS_OFF /* host acknowleged power down */ )
             {
                 power_private.state = XO_SWITCH_OFF_2;
             }
@@ -321,8 +556,9 @@ void handle_power(void)
 
         case XO_SWITCH_OFF_2:
         case XO_EMERGENCY_OFF:
+        case XO_MAIN_OR_SUS_ERROR:
             SWITCH_DCON_EN_OFF;
-            SWITCH_WLAN_OFF;
+            SWITCH_WLAN_OFF; /* ... */
             SWITCH_VR_ON_OFF;
  // SWITCH_PWR_BUT_OFF;
 // SWITCH_ECPWRRQST_OFF;
@@ -335,3 +571,4 @@ void handle_power(void)
 
     STATES_UPDATE(power, power_private.state);
 }
+#endif

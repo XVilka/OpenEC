@@ -24,8 +24,10 @@
 
 #include <stdbool.h>
 #include "kb3700.h"
+#include "timer.h"
 
-#define BITBANG (1)
+#define BITBANG (0)
+#define BAUDRATE (115200uL)
 
 #if BITBANG && defined(SDCC)
 
@@ -100,21 +102,36 @@ void uart_init()
 
 void putchar(unsigned char c)
 {
-    volatile unsigned int t = 1000; /**< no endless loop for now
-                                         (later there's a watchdog so
-                                         endless loops are not bad per se) */
-
-    while( !TI && --t )
+    while( !TI )
         ;
+    TI = 0;
     SBUF = c;
+}
+
+//! unsigned? unsigned.
+/*! please never poll here. Check RI before calling.
+
+    Ooops, seems WLAN has to be switched ON
+    otherwise RX/BAT_L0 is clamped at around 2V... (B1)
+
+    \todo eventually add a resistor between (CN24,3 and CON2,45) so that using
+    \todo the debricking adapter can not do harm to the WLAN module
+ */
+unsigned char getchar()
+{
+    while( !RI )
+        ;
+    RI = 0;
+    return SBUF;
 }
 
 void uart_init()
 {
+    /* the IO part */
     GPIOFS00 |=  0x40; /**< switch to alternate output for TX */
     GPIOFS00 &= ~0x80; /**< no alternate output for RX */
 
-    GPIOOE00 |=  0x40; /**< output enable for TX */
+    GPIOOE00 &= ~0x40; /**< no output enable for TX !!! GPIOFS seems to do it */
     GPIOOE00 &= ~0x80; /**< no output enable for RX */
 
     GPIOIE00 &= ~0x40; /**< TX is not input */
@@ -123,19 +140,33 @@ void uart_init()
     GPIOMISC |=  0x01; /**< GPIO06 is E51_TXD */
     GPIOMISC &= ~0x02; /**< GPIO07 is not E51_CLK */
 
-    SCON  = 0x52;      /**< not unusual */
-    SCON2 = 0x9e;      /**< something */
-    SCON3 = 0x9f;      /**< dont care for now */
 
-// And now for the desparate part:
-// switch on timers that might be used just to get
-// uart running with _any_ speed. Remove!
-TMOD = 0x11;
-TR0 = 1;
-TR1 = 1;
+    /* the UART part */
+    SCON  = 0x52;      /**< not unusual */
+
+    /* Would have expected something this: */
+    SCON2 = (unsigned char)((SYSCLOCK + BAUDRATE)/ (2 * BAUDRATE) >> 8);
+    SCON3 = (unsigned char)((SYSCLOCK + BAUDRATE)/ (2 * BAUDRATE));
+
+    /* But, hmmm, 0x7f gives the desired 115 kBaud here (measured with 
+       default PLLCFG).
+       Seems the default PLLCFG of 0x70 trimms the PLL too low.
+       Set PLLCFG to 0x80 (reset default is 0x70) results in successful
+       communication (111.1 kBaud instead of 115.2 kBaud).
+       (If baudrate does not match, please either adjust here or
+       preferably adjust PLLCFG in _sdcc_external_startup())
+     */
+//    SCON2 = 0x00;
+//    SCON3 = 0x7f;
+
+    /* seems no need to enable a timer:) */
+
+    /* sets TI when character is transmitted,
+       another hmmm, I do never see this character. */
+    SBUF = '*';
 }
 
-#else 
+#else
 
 /* gcc and others use their putchar() for now */
 //void putchar(unsigned char c){}
@@ -165,7 +196,13 @@ void putspace()
     putchar(' ');
 }
 
-unsigned char putstring(unsigned char *p)
+void putcrlf()
+{
+    putchar('\r');
+    putchar('\n');
+}
+
+unsigned char putstring(unsigned char __code *p)
 {
     unsigned char c;
     unsigned char len = 0;
@@ -177,5 +214,4 @@ unsigned char putstring(unsigned char *p)
     }
     return len;
 }
-
 

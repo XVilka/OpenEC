@@ -26,10 +26,12 @@
 #include "kb3700.h"
 
 void putchar(unsigned char c);
+unsigned char getchar();
 
 void uart_init();
 
 void puthex(unsigned char c);
 void puthex_u16(unsigned int i);
 void putspace();
-unsigned char putstring(unsigned char *p);
+void putcrlf();
+unsigned char putstring(unsigned char __code *p);
