@@ -27,6 +27,7 @@
 
 void putchar(unsigned char c);
 unsigned char getchar();
+bool char_avail( void );
 
 void uart_init();
 
@@ -35,3 +36,5 @@ void puthex_u16(unsigned int i);
 void putspace();
 void putcrlf();
 unsigned char putstring(unsigned char __code *p);
+
+void uart_interrupt(void) __interrupt(4);

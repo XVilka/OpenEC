@@ -12,9 +12,10 @@ SYMS      = $(SOURCES:.c=.sym)
 RSTS      = $(SOURCES:.c=.rst)
 ADBS      = $(SOURCES:.c=.adb)
 PROJECT   = openec
-SOURCES   = main.c fs_entry.c battery.c ds2756.c matrix_3x3.c monitor.c one_wire.c port_0x6c.c \
-            power.c sfr_dump.c sfr_rw.c states.c timer.c uart.c unused_irq.c \
-            watchdog.c build.c
+SOURCES   = main.c fs_entry.c adc.c battery.c ds2756.c idle.c matrix_3x3.c monitor.c \
+            one_wire.c port_0x6c.c power.c sfr_dump.c sfr_rw.c states.c \
+            temperature.c timer.c uart.c unused_irq.c watchdog.c \
+            build.c
 
 .SUFFIXES: .rel
 
@@ -32,7 +33,7 @@ $(PROJECT).ihx : $(RELS)
 
 .c.rel :
 	@echo "Compiling $<"
-	touch build.c      
+	touch build.c
 	$(CC) $(CFLAGS) -o $@ -c $<
 
 docs :

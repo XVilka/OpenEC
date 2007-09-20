@@ -24,13 +24,16 @@
 
 #include <stdbool.h>
 #include "kb3700.h"
+#include "idle.h"
 #include "timer.h"
+#include "uart.h"
 
 #define BITBANG (0)
 #define BAUDRATE (115200uL)
 
 #if BITBANG && defined(SDCC)
 
+//! the delays in this bitbanging routine result in 115 kBaud with PLLCFG = 0x70
 void putchar(unsigned char c)
 {
     __asm
@@ -100,29 +103,98 @@ void uart_init()
 
 #elif !BITBANG && defined (SDCC)
 
+static volatile unsigned char __pdata tx_buffer[64];
+static volatile unsigned char __pdata rx_buffer[16];
+
+static volatile unsigned char __pdata rx_head;
+static          unsigned char __pdata rx_tail;
+static          unsigned char __pdata tx_head;
+static volatile unsigned char __pdata tx_tail;
+
+static volatile bool tx_active;
+
+
 void putchar(unsigned char c)
 {
-    while( !TI )
+    unsigned char next_tx_head;
+
+    next_tx_head = (unsigned char)(tx_head + 1) % sizeof tx_buffer;
+
+    while( next_tx_head == tx_tail )
         ;
-    TI = 0;
-    SBUF = c;
+
+    ES = 0;
+
+    tx_buffer[next_tx_head] = c;
+    tx_head = next_tx_head;
+
+    if( !tx_active)
+    {
+        tx_active = 1;
+        TI = 1;      /**< start TX interrupt chain */
+    }
+
+    ES = 1;
 }
 
 //! unsigned? unsigned.
-/*! please never poll here. Check RI before calling.
-
-    Ooops, seems WLAN has to be switched ON
-    otherwise RX/BAT_L0 is clamped at around 2V... (B1)
-
-    \todo eventually add a resistor between (CN24,3 and CON2,45) so that using
-    \todo the debricking adapter can not do harm to the WLAN module
+/*! please never poll here. Check buffer before calling.
  */
 unsigned char getchar()
 {
-    while( !RI )
+    unsigned char c;
+    unsigned char rx_next_tail;
+
+    rx_next_tail = (unsigned char)(rx_tail + 1) % sizeof rx_buffer;
+
+    while( rx_tail == rx_head )
         ;
-    RI = 0;
-    return SBUF;
+
+    c = rx_buffer[ rx_next_tail ];
+
+    rx_tail = rx_next_tail; /* IRQ safe */
+
+    return c;
+}
+
+
+void uart_interrupt(void) __interrupt(4)
+{
+
+    if( RI )
+    {
+        unsigned char next_rx_head;
+
+        next_rx_head = (unsigned char)(rx_head + 1) % sizeof rx_buffer;
+        if( next_rx_head != rx_tail )
+        {
+            rx_buffer[next_rx_head] = SBUF;
+            rx_head = next_rx_head;
+        }
+        RI = 0;
+        busy = 1;   /**< new data, do not sleep */
+    }
+
+    if( TI )
+    {
+        unsigned char next_tx_tail;
+
+        TI = 0;
+        next_tx_tail = tx_tail;
+        if( next_tx_tail == tx_head )
+            tx_active = 0;
+        else
+        {
+            next_tx_tail = (unsigned char)(next_tx_tail + 1) % sizeof tx_buffer;
+            SBUF = tx_buffer[next_tx_tail];
+            tx_tail = next_tx_tail;
+        }
+    }
+}
+
+bool char_avail( void )
+{
+    return rx_tail ^ rx_head;
 }
 
 void uart_init()
@@ -142,28 +214,19 @@ void uart_init()
 
 
     /* the UART part */
-    SCON  = 0x52;      /**< not unusual */
+    SCON  = 0x50;      /**< not unusual */
 
-    /* Would have expected something this: */
+    /* If baudrate does not match, please either adjust here or
+       adjust PLLCFG in _sdcc_external_startup() */
     SCON2 = (unsigned char)((SYSCLOCK + BAUDRATE)/ (2 * BAUDRATE) >> 8);
     SCON3 = (unsigned char)((SYSCLOCK + BAUDRATE)/ (2 * BAUDRATE));
 
-    /* But, hmmm, 0x7f gives the desired 115 kBaud here (measured with 
-       default PLLCFG).
-       Seems the default PLLCFG of 0x70 trimms the PLL too low.
-       Set PLLCFG to 0x80 (reset default is 0x70) results in successful
-       communication (111.1 kBaud instead of 115.2 kBaud).
-       (If baudrate does not match, please either adjust here or
-       preferably adjust PLLCFG in _sdcc_external_startup())
-     */
-//    SCON2 = 0x00;
-//    SCON3 = 0x7f;
-
-    /* seems no need to enable a timer:) */
-
-    /* sets TI when character is transmitted,
-       another hmmm, I do never see this character. */
     SBUF = '*';
+
+    ES = 0;
+    rx_tail = rx_head;
+    tx_head = tx_tail;
+    ES = 1;
 }
 
 #else
@@ -176,7 +239,15 @@ void uart_init()
 {
 }
 
+bool char_avail( void )
+{
+    return 0;
+}
+
 #endif
+
+
+//----8<----------------------------------------------------------------------
 
 
 void puthex(unsigned char c)

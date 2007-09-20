@@ -23,6 +23,7 @@
 -------------------------------------------------------------------------*/
 #include <stdbool.h>
 #include "kb3700.h"
+#include "adc.h"
 #include "power.h"
 #include "watchdog.h"
 #include "timer.h"
@@ -129,6 +130,8 @@ void timer_gpt3_interrupt(void) __interrupt(0x17)
             /* reset this so subsystems have to report again */
             watchdog_all_up_and_well = 0x00;
         }
+
+        ADC_START_CONVERSION;
     }
 
     busy = 1;

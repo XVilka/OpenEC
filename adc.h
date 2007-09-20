@@ -1,5 +1,5 @@
 /*-------------------------------------------------------------------------
-   one_wire.h - one wire protocol for the EC
+   adc.h - handle the ADC on the EC
 
    Copyright (C) 2007  Frieder Ferlemann <Frieder.Ferlemann AT web.de>
 
@@ -22,14 +22,15 @@
    what you give them.   Help stamp out software-hoarding!
 -------------------------------------------------------------------------*/
 
-#include <stdbool.h>
-#include "kb3700.h"
+#define ADC_START_CONVERSION do{ ADCTRL |= 0x01; } while(0)
 
-void ow_read_byte_init();
-void ow_write_byte_init(unsigned char b);
-__bit ow_busy();
-unsigned char ow_get_read_byte(void);
-void ow_reset_and_presence_detect_init(void);
-unsigned char ow_reset_and_presence_detect_read(void);
+extern unsigned char __xdata adc_cache[2];
+extern unsigned char __xdata board_id;
 
-void timer1_interrupt(void) __interrupt (3);
+void adc_interrupt(void) __interrupt(0x1f);
+
+void adc_init(void);
+
+void get_board_id(void);
+
+unsigned char __code * board_id_to_string(void);

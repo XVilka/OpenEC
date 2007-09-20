@@ -92,10 +92,13 @@
 
 #include <stdbool.h>
 #include "kb3700.h"
+#include "adc.h"
 #include "battery.h"
 #include "build.h"
+#include "idle.h"
 #include "matrix_3x3.h"
 #include "monitor.h"
+#include "one_wire.h"
 #include "power.h"
 #include "port_0x6c.h"
 #include "sfr_dump.h"
@@ -111,8 +114,6 @@
 #define LED_CHG_R_OFF do{GPIOD08 |=  0x04;}while(0)
 #define LED_CHG_R_ON  do{GPIOD08 &= ~0x04;}while(0)
 
-
-unsigned char __xdata board_id;
 
 //! pre-C stuff
 /*! Code that is executed before C-startup may be placed here.
@@ -140,11 +141,11 @@ unsigned char _sdcc_external_startup(void)
                              If the XO waits on the EC the increased speed can translate
                              into powersavings */
 #endif
-    SPICFG = 0x04;      /**< bit 2 as or not as dumped by ec-dump.fth. Not sure how this bit should be set.
+    SPICFG = 0x00;      /**< bit 2 as or not as dumped by ec-dump.fth. Not sure how this bit should be set.
                              It relates to FAST_READ of the SPI flash. The clock frequency I'm seeing
                              at pin 6 of the flash (30MHz) would not require the FAST_READ mode.
                              So likely the dummy byte which is additionally transmitted for FAST_READ
-                             can be avoided (40# instead of 48#) 
+                             can be avoided (40# instead of 48# for the first byte if address had to be set)
                              CLKCFG Bit6 would allow to select full/half speed (of internal clock
                              (66MHz+-25%)). 
 
@@ -214,101 +215,6 @@ void port_init(void)
     LED_PWR_ON;
 }
 
-
-void adc_init(void)
-{
-    ADDAEN = 0x03;
-
-    /* Reset pending flag */
-    P3IF &= ~0x80;
-
-    /* start conversion on ADC1 */
-    ADCTRL = 0x05;
-}
-
-void get_board_id(void)
-{
-    unsigned int i;
-    unsigned char adc;
-    unsigned char __code board_id_table[16] =
-    {
-        0xff,
-        0xb3,  0xff,
-        0xb4,  0xff,
-        0x00,  0xff,
-        0x01,  0xff,
-        0xb2,  0xff,
-        0x02,  0xff,
-        0x03,  0xff,
-        0x04,
-    };
-
-    /* from http://wiki.laptop.org/go/Ec_specification 20070901
-        00-07h	B3	
-        08-17h		guard band
-        18-27h	B4	
-        28-37h		guard band
-        38-47h	N	
-        48-57h		guard band
-        58-67h	N + 1	
-        68-77h		guard band
-        78-87h	B2	
-        88-97h		guard band
-        98-A7h	N + 2	
-        A8-B7h		guard band
-        B8-C7h	N + 3	
-        C8-D7h		guard band
-        D8-E7h	N + 4	
-        E8-F7h		guard band
-        F8-FFh	N + 5	
-    */
-
-    /* enable ADC channels */
-    ADDAEN = 0x03;
-
-    /* Reset ADC IRQ pending flag */
-    P3IF &= ~0x80;
-
-    /* select ADC1, is a settling time needed? */
-    ADCTRL = 0x04;
-
-    /* start conversion on ADC1 */
-    ADCTRL = 0x05;
-
-    for( i = 0; i != 0x3fff; i++ )
-    {
-        if( P3IF & 0x80 )       /**< end of conversion? Method 1 */
-            break;
-        if( !(ADCTRL & 0x01) )  /**< end of conversion? Method 2 */
-            break;
-    }
-
-    adc = ADCDAT;
-
-    if( adc >= 0xf8 )
-        board_id = 0x05;
-    else if( adc >= 0xe8 )
-        board_id = 0xff;
-    else
-        board_id = board_id_table[ (unsigned char)(adc + 0x08) / 0x10 ];
-
-    /* Hmmm, the ADC always seems to run into timeout? */
-    /* putspace(); puthex_u16(i); putspace(); puthex(ADCDAT); */
-}
-
-//! assumes board_id is properly set
-unsigned char __code * board_id_to_string(void)
-{
-   switch( board_id )
-   {
-      case 0xb1: return "B1";
-      case 0xb2: return "B2";
-      case 0xb3: return "B3";
-      default: return "??";
-   }
-}
-
-
 //! off-load blinking (and off-after-a-while) stuff to non IRQ
 void handle_leds(void)
 {
@@ -325,15 +231,6 @@ void handle_leds(void)
     }
 }
 
-//! Entering low power mode
-/*! IRQs should wake us again
- */
-#define SLEEP() do \
-{ \
-    PCON |= 0x01; \
-    /* maybe: PMUCFG = 0x53; */ \
-} while(0)
-
 
 void handle_debug(void)
 {
@@ -349,6 +246,7 @@ void handle_debug(void)
             dump_mcs51();
             dump_xdata_sfr();
         }
+        cursors.keycode_updated = 0; // hack
     }
 
     /* does current state of this bit differ from the state that was last seen */
@@ -360,6 +258,7 @@ void handle_debug(void)
         {
             dump_gpio();
         }
+        cursors.keycode_updated = 0; // hack
     }
 
 }
@@ -379,7 +278,7 @@ void startup_message(void)
     puthex(ECHV);
     /* ADC reading codes Board ID */
     putstring(") ID(");
-    puthex(board_id);
+    putstring(board_id_to_string());
     /* Stack pointer */
     putstring(") SP(");
     puthex(SP);
@@ -398,10 +297,14 @@ void main (void)
     timer_gpt3_init();
     adc_init();
     cursors_init();
-    uart_init();
     power_init();
-    get_board_id();
 
+    uart_init();
+
+    /* enable interrupts. */
+    EA = 1;
+
+    get_board_id();
     startup_message();
 
     dump_xdata_sfr();
@@ -410,7 +313,10 @@ void main (void)
     dump_mcs51();
 
     print_states_ruler();
+    print_states_enable = 1;
     print_states();
+    print_states_enable = 0;
+
     save_old_states();
     states.number = 0;
 
@@ -418,8 +324,6 @@ void main (void)
     LED_CHG_R_OFF;
     LED_PWR_OFF;
 
-    /* enable interrupts. */
-    EA = 1;
 
     /* The main loop contains several state machines handling
        various subsystems on the EC.
@@ -446,7 +350,7 @@ void main (void)
         busy |= handle_cursors();
 //        busy |= handle_battery();
         handle_leds();
-         handle_power();
+        handle_power();
 
         watchdog_all_up_and_well |= WATCHDOG_MAIN_LOOP_IS_FINE;
 
@@ -454,8 +358,9 @@ void main (void)
 
         monitor();
 
-        while( !busy && may_sleep )
-            SLEEP();
+        handle_debug();
+
+        sleep_if_allowed();
     }
 }
 

@@ -29,10 +29,12 @@
 #include <stdbool.h>
 #include <ctype.h>
 #include "kb3700.h"
-#include "uart.h"
+#include "adc.h"
 #include "sfr_rw.h"
 #include "sfr_dump.h"
 #include "states.h"
+#include "temperature.h"
+#include "uart.h"
 
 typedef enum {monitor_idle, command_m, command_set, command_error } monitor_state;
 
@@ -134,8 +136,9 @@ void monitor()
 {
     unsigned char c;
 
-    if( !RI )
+    if( !char_avail() )
         return;
+
     c = getchar();
     if( c == '\n' )
         return;
@@ -161,9 +164,34 @@ void monitor()
                     prompt();
                     break;
                 case '?':
-                    putstring( "\r\n?dgGmsS= see \"" __FILE__ "\"");
+                    putstring( "\r\n?cdgGmsS= see \"" __FILE__ "\"");
                     prompt();
                     break;
+                case 'c':
+                    putstring( "\r\n0x" );
+                    puthex( adc_to_degC( adc_cache[0] ) );
+                    putstring( " degC" );
+                    prompt();
+                    break;
+#if 1
+                /* temporarily here: */
+                case 'C':
+                    {
+                        unsigned char i = 0;
+                        do
+                        {
+                            if(!(i&0x0f))
+                            {
+                                putcrlf();
+                                puthex(i);
+                                putchar(':');
+                            }
+                            putspace();
+                            puthex( adc_to_degC(i));
+                        } while(++i);
+                      }
+                    break;
+#endif
                 case 'd':
                     dump_mcs51();
                     prompt();
@@ -181,11 +209,14 @@ void monitor()
                     m.state = command_m;
                     break;
                 case 's':
+                    print_states_enable = 1;
+                    print_states();
                     print_states_enable = 0;
                     prompt();
                     break;
                 case 'S':
-                    print_states_enable = 1;
+                    print_states_ruler();
+                    print_states_enable = !print_states_enable;
                     prompt();
                     break;
                 case '=':

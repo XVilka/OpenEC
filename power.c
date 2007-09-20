@@ -73,20 +73,6 @@
 #define POWER_BUTTON_PRESSED !(GPIOEIN0 & 0x80)             /* R74 next to SD-Card */
 
 
-//! This is set by an interrupt routine or a state machine
-/*! Value is reset during each iteration of the main loop.
-    \see may_sleep
- */
-bool busy;
-
-//! This is kind of "not busy"
-/*! It's value is expected to persevere for more than one 
-    iteration of the main loop. Currently not in use?
-    \see busy
- */
-bool may_sleep = 1;
-
-
 typedef enum
 {
     XO_OFF,

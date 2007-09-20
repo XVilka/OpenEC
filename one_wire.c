@@ -29,6 +29,7 @@
 #include <stdbool.h>
 #include "kb3700.h"
 #include "ds2756.h"
+#include "one_wire.h"
 #include "states.h"
 #include "timer.h"
 
@@ -218,7 +219,7 @@ unsigned char ow_reset_and_presence_detect_read(void)
     5 for registers R2, DPH, DPL, ACC, PSW
     x for the computed jump within the switch statement
  */
-void timer1_interrupt(void) __interrupt (0x04)
+void timer1_interrupt(void) __interrupt (3)
 {
 
     switch( transfer_state>>4 )
