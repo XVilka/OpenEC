@@ -22,9 +22,10 @@
    what you give them.   Help stamp out software-hoarding!
 -------------------------------------------------------------------------*/
 
-/*
-   see f.e.: http://pdfserv.maxim-ic.com/en/an/AN817.pdf
-   and: http://lists.laptop.org/pipermail/openec/2007-September/000092.html
+/* see f.e.:
+   http://www.specsensors.com/ntc-engineering.asp
+   http://pdfserv.maxim-ic.com/en/an/AN817.pdf
+   http://lists.laptop.org/pipermail/openec/2007-September/000092.html
  */
 
 #include <stdbool.h>

@@ -97,6 +97,7 @@
 #include "build.h"
 #include "idle.h"
 #include "matrix_3x3.h"
+#include "manufacturing.h"
 #include "monitor.h"
 #include "one_wire.h"
 #include "power.h"
@@ -266,7 +267,7 @@ void handle_debug(void)
 
 void startup_message(void)
 {
-    putstring("\r\nHello World!\r\n");
+    putcrlf();
 #ifdef __GNUC__
     putstring("GCC " __VERSION__ "\r\n");
 #endif
@@ -286,6 +287,14 @@ void startup_message(void)
     putstring(date_string);
     putspace();
     putstring(time_string);
+
+    /* now for some manufacturing data */
+    putcrlf();
+    if( manufacturing_find_tag("T#") )
+        manufacturing_print_tag();
+    putspace();
+    if( manufacturing_find_tag("SN") || manufacturing_find_tag("S#") )
+        manufacturing_print_tag();
 }
 
 
@@ -319,6 +328,8 @@ void main (void)
 
     save_old_states();
     states.number = 0;
+
+//     manufacturing_print_all();
 
     LED_CHG_G_OFF;
     LED_CHG_R_OFF;

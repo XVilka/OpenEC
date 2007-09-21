@@ -30,32 +30,42 @@
 #include <ctype.h>
 #include "kb3700.h"
 #include "adc.h"
+#include "flash.h"
 #include "sfr_rw.h"
 #include "sfr_dump.h"
 #include "states.h"
 #include "temperature.h"
 #include "uart.h"
 
-typedef enum {monitor_idle, command_m, command_set, command_error } monitor_state;
+typedef enum {monitor_idle, command_m, command_M, command_set, command_error } monitor_state;
 
 static struct
 {
     monitor_state state;
+    unsigned int address_page;
     unsigned int address;
     unsigned int arg;
     unsigned char digits;
 } __pdata m;
 
 
-static void dump_address( unsigned int address, unsigned char is_xdata )
+static void dump_address( unsigned int address, unsigned char area )
 {
-    if( is_xdata )
-        puthex( *(unsigned char __xdata *)address );
-    else
-        if( (unsigned char)address < 0x80 )
-            puthex( *(unsigned char __idata *)address );
-        else
-            puthex( read_mcs51_sfr( (unsigned char)address ) );
+    switch( area )
+    {
+        case 0: /* idata/SFR */
+            if( (unsigned char)address < 0x80 )
+                puthex( *(unsigned char __idata *)address );
+            else
+                puthex( read_mcs51_sfr( (unsigned char)address ) );
+            break;
+        case 1: /* xdata/code */
+            puthex( *(unsigned char __xdata *)address );
+            break;
+        case 2: /* code (anywhere in the SPI flash) */
+            puthex( flash_read_byte(m.address_page, m.address) );
+            break;
+    }
 }
 
 
@@ -155,12 +165,14 @@ void monitor()
                     m.address++;
                     putchar('\r');
                 case '\r':
+                    if( m.digits == 5 )
+                        puthex( m.address_page );
                     if( m.digits > 2 )
                         puthex_u16( m.address );
                     else
                         puthex( (unsigned char)m.address );
                     putstring( ": " );
-                    dump_address( m.address, m.digits > 2 );
+                    dump_address( m.address, (m.digits == 5) ? 2 : (m.digits > 2));
                     prompt();
                     break;
                 case '?':
@@ -208,6 +220,10 @@ void monitor()
                     get_next_digit( &m.address, 0x00 );
                     m.state = command_m;
                     break;
+                case 'M':
+                    get_next_digit( &m.address_page, 0x00 );
+                    m.state = command_M;
+                    break;
                 case 's':
                     print_states_enable = 1;
                     print_states();
@@ -243,6 +259,21 @@ void monitor()
                         m.state = 0;
                         prompt();
                     }
+                }
+            }
+            break;
+
+        // just a hack. Likely will be removed.
+        case command_M:
+            {
+                unsigned char digits;
+
+                digits = get_next_digit( &m.address_page, c);
+                if( digits )
+                {
+                    m.digits = 5; /* 0xabcde */
+                    m.state = 0;
+                    prompt();
                 }
             }
             break;
