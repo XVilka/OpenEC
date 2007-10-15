@@ -29,23 +29,29 @@
 
 #include <stdbool.h>
 #include "kb3700.h"
+#include "one_wire.h"
 
 //! data from battery sensor
 /*! adapt to Maxim/Dallas DS2756 */
 typedef struct data_ds2756_type{
          unsigned int voltage_raw;
            signed int current_raw;
-         unsigned long charge_raw;
+         unsigned int charge_raw;
            signed int temp_raw;
+           signed int avg_current_raw;
 
          unsigned char serial_number[6];
          unsigned int serial_number_valid:1;
 
+/*
          unsigned char eeprom_address_from_host;
          unsigned char eeprom_data_to_or_from_host;
          unsigned int eeprom_host_has_a_request:1;
          unsigned int eeprom_request_is_a_write:1;
          unsigned int eeprom_ec_completed_request:1;
+*/
+         struct ow_transfer_type host_transfer;
+         struct ow_transfer_type batt_transfer;
 
          union
          {
@@ -61,8 +67,7 @@ typedef struct data_ds2756_type{
 
                  unsigned int no_device:1;
                  unsigned int no_device_flag_is_invalid:1;
-                 unsigned int line_stuck_low:1;
-                 unsigned int line_stuck_high:1;
+                 unsigned int line_stuck:1;
              };
          } error;
        };
@@ -72,3 +77,5 @@ extern struct data_ds2756_type __xdata data_ds2756;
 
 
 bool handle_ds2756(void);
+void dump_ds2756(void);
+bool dump_ds2756_all();

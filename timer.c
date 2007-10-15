@@ -173,6 +173,30 @@ unsigned long get_time(void)
     return t;
 }
 
+//! safely gets the time
+unsigned long get_time_ms(void)
+{
+    unsigned long t;
+    unsigned int subsecond;
+
+    /* mask the IRQ that changes tick */
+    P1IE &= ~0x80;
+
+    t = second;
+
+    /* need subsecond resolution? */
+    subsecond = tick_next_s - tick;
+
+    /* reenable the IRQ. It was enabled wasn't it? */
+    P1IE |= 0x80;
+
+    t *= 1000;
+    t += subsecond * (1000/HZ);
+
+    return t;
+}
+
+
 //! sets the time
 /*! calling this might upset functions using the variable second
 

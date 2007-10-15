@@ -204,7 +204,7 @@ void host_interface_interrupt(void) __interrupt(0x0e)
                    o Cmd data is the EEPROM address of the byte requested
                    o Result is 1 byte of EEPROM data
                  */
-                TRANSFER_FROM_HOST_INIT(data_ds2756.eeprom_address_from_host, 1);
+                //TRANSFER_FROM_HOST_INIT(data_ds2756.eeprom_address_from_host, 1);
                 break;
             case 0x19: /* Read board id (1 byte) */
                 TRANSFER_TO_HOST_INIT(&six_zero_bytes, 1); // dummy
@@ -359,7 +359,7 @@ void host_interface_interrupt(void) __interrupt(0x0e)
                      */
 
                      /* now it is known which eeprom byte should be read */
-                    data_ds2756.eeprom_host_has_a_request = 1;
+ //                   data_ds2756.eeprom_host_has_a_request = 1;
 
                      /* the story does not end here though:
                         The byte has to be read and then transferred

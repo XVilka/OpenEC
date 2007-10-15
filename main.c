@@ -95,6 +95,9 @@
 #include "adc.h"
 #include "battery.h"
 #include "build.h"
+#include "charge_sched.h"
+#include "one_wire.h"
+#include "ds2756.h"
 #include "idle.h"
 #include "matrix_3x3.h"
 #include "manufacturing.h"
@@ -321,6 +324,8 @@ void main (void)
     dump_gpio();
     dump_mcs51();
 
+tx_drain();  // oops, UART routines seem not yet clean
+
     print_states_ruler();
     print_states_enable = 1;
     print_states();
@@ -329,7 +334,11 @@ void main (void)
     save_old_states();
     states.number = 0;
 
-//     manufacturing_print_all();
+    manufacturing_print_all();
+
+    ow_init();
+    timer1_init();
+    battery_charging_table_init();
 
     LED_CHG_G_OFF;
     LED_CHG_R_OFF;
@@ -362,6 +371,8 @@ void main (void)
 //        busy |= handle_battery();
         handle_leds();
         handle_power();
+        handle_ds2756();
+        busy |= handle_battery_charging_table();
 
         watchdog_all_up_and_well |= WATCHDOG_MAIN_LOOP_IS_FINE;
 

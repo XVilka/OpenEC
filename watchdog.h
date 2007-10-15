@@ -25,6 +25,7 @@
 #define WATCHDOG_MAIN_LOOP_IS_FINE    (0x80)
 #define WATCHDOG_PS2_IS_FINE          (0x40)
 #define WATCHDOG_BATTERY_CODE_IS_FINE (0x20)
+#define WATCHDOG_ONE_WIRE_IS_FINE     (0x10)
 
 extern unsigned char __data watchdog_all_up_and_well;
 

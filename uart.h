@@ -28,6 +28,7 @@
 void putchar(unsigned char c);
 unsigned char getchar();
 bool char_avail( void );
+void tx_drain( void );
 
 void uart_init();
 

@@ -197,6 +197,12 @@ bool char_avail( void )
     return rx_tail ^ rx_head;
 }
 
+void tx_drain( void )
+{
+    while( tx_active )
+        ;
+}
+
 void uart_init()
 {
     /* the IO part */
@@ -242,6 +248,10 @@ void uart_init()
 bool char_avail( void )
 {
     return 0;
+}
+
+void tx_drain( void )
+{
 }
 
 #endif

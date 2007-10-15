@@ -148,4 +148,7 @@ void print_states (void)
          cursors.keycode_updated = 0;
      }
 #endif
+
+ow_dump();
+
 }

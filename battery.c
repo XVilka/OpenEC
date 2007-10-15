@@ -28,7 +28,10 @@
    http://dev.laptop.org/git.do?p=olpc-2.6;a=tree;f=drivers/power
  */
 #include <stdbool.h>
+#include "battery.h"
+#include "ds2756.h"
 #include "kb3700.h"
+#include "one_wire.h"
 #include "timer.h"
 #include "states.h"
 
@@ -48,40 +51,19 @@
 
 #define PWM_MAX (0xfe)
 
-//! battery error flags
-/*! read out by host resets? */
-struct { unsigned int bat_too_hot:1;
-         unsigned int bat_over_voltage:1;
-         unsigned int bat_under_voltage:1;
-         unsigned int bat_implausible_capacity:1;
-         unsigned int bat_state_machine_error:1;
-         unsigned int bat_no_battery_detected:1;
-         } __xdata battery_error;
+#define BATTERY_COMPARE_NUM (8)
 
 //! High level view of battery
-struct {
-         unsigned int timestamp;
-         unsigned int voltage_mV;
-           signed char temp_degC;
-           signed int current_mA;
-         unsigned long charge_mAs;
-         unsigned int charge_mAs_unreliable:1;
-         unsigned int may_charge:1;
-         unsigned int may_trickle_charge:1;
-           //unsigned int bat_chem_LiFe:1;
-       } __xdata battery;
+battery_type __xdata battery;
+
+
+battery_error_type __xdata battery_error;
 
 bool bat_chem_LiFe;
-
+bool battery_news;
 //! Power Supply type
 /*! Should about powersupply we care? Probably yes.
     Move into separate file. */
-enum {
-      PS_TYPE_UNKNOWN,
-      PS_TYPE_SOLAR,
-      PS_TYPE_Pb,
-      PS_TYPE_WALL_ADAPTER,
-     };
 
 struct {
         unsigned char ps_type;
@@ -111,6 +93,8 @@ bool handle_battery(void)
     static enum{
         bat_init,
         bat_get_info,
+        bat_get_info_2,
+        bat_delay_before_retrying,
         bat_trickle_charge_unknown_battery,
         bat_ramp_up_charge_current,
         bat_charge,
@@ -137,12 +121,15 @@ bool handle_battery(void)
             break;
 
         case bat_get_info:
-            state = bat_trickle_charge_unknown_battery;
+            if( data_ds2756.serial_number_valid )
+                state = bat_trickle_charge_unknown_battery; // ... xx
             break;
 
         case bat_trickle_charge_unknown_battery:
             if( battery.may_charge )
                 state = bat_ramp_up_charge_current;
+            else
+                state = bat_init;
             break;
 
         case bat_charge:

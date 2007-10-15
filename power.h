@@ -25,6 +25,8 @@
 #define LED_PWR_OFF    do{GPIOD08 |=  0x02;}while(0)
 #define LED_PWR_ON     do{GPIOD08 &= ~0x02;}while(0)
 
+#define IS_AC_IN_ON    (GPIADIN & 0x04)
+
 extern bool busy;
 extern bool may_sleep;
 

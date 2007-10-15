@@ -127,7 +127,7 @@ void debug_toggle(void)
 
 
 //! Handles input from 3x3 matrix
-/*! see also http://wiki.laptop.org/index.php?title=Ec_specification&action=edit&section=6
+/*! see also http://wiki.laptop.org/index.php?title=Ec_specification
  *
  * This routine only reacts on a single key change.
  * If more than one key is changed (can you really

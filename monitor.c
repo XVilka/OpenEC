@@ -30,6 +30,7 @@
 #include <ctype.h>
 #include "kb3700.h"
 #include "adc.h"
+#include "ds2756.h"
 #include "flash.h"
 #include "sfr_rw.h"
 #include "sfr_dump.h"
@@ -176,7 +177,15 @@ void monitor()
                     prompt();
                     break;
                 case '?':
-                    putstring( "\r\n?cdgGmsS= see \"" __FILE__ "\"");
+                    putstring( "\r\n?bBcdgGmsS+-= see \"" __FILE__ "\"");
+                    prompt();
+                    break;
+                case 'b':
+                    dump_ds2756();
+                    prompt();
+                    break;
+                case 'B':
+                    dump_ds2756_all();
                     prompt();
                     break;
                 case 'c':

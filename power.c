@@ -34,6 +34,7 @@
 #include "kb3700.h"
 #include "states.h"
 #include "timer.h"
+#include "one_wire.h"
 #include "power.h"
 
 /* dangerous! */
@@ -42,6 +43,8 @@
 
 #define IS_MAIN_ON    (GPIOD18 & 0x04) /* (B1 about 68mm, 108mm)U13,6  CS5536 WORKING? */
 #define IS_SUS_ON     (GPIOD18 & 0x08) /* (B1 near SD-Card)U33,6  CS5536 WORK_AUX? */
+#define IS_AC_IN_ON   (GPIADIN & 0x04)
+
 
 #define IS_MAIN_ON_AND_SUS_ON ((GPIOD18 & 0x0c) == 0x0c)
 #define IS_MAIN_OFF_AND_SUS_OFF (!(GPIOD18 & 0x0c))
@@ -119,7 +122,7 @@ void power_init(void)
     GPIOEIN0_0xfc64 |= 0x80;  /* avoiding name clash, GPIOEIN0 */
 
     /*! ACIN is input */
-//    GPIADIE0 |= 0x04;
+    GPIADIE0 |= 0x04;
 
     /*! MAIN_ON, SUS_ON are input */
     GPIOIE18 |= 0x0c;

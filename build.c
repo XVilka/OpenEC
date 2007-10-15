@@ -55,7 +55,7 @@ char __code __at(0xc000) cookie_3 = 0x03;
 char __code __at(0xf300) url_string[]     = "http://www.laptop.org";
 
 char __code __at(0xf390) name_string[]    = "openec";
-char __code __at(0xf3a0) version_string[] = "0.0.5" PATCHLEVEL;
+char __code __at(0xf3a0) version_string[] = "0.0.6" PATCHLEVEL;
 char __code __at(0xf3b0) compiler_version[] = COMPILER_VERSION;
 char __code __at(0xf3c0) status_string[]  = "dangerous!";
 char __code __at(0xf3d0) target_string[]  = "B1-B1";

@@ -22,16 +22,22 @@
    what you give them.   Help stamp out software-hoarding!
 -------------------------------------------------------------------------*/
 
-extern struct {
+#include <stdint.h>
+#include <stdbool.h>
+#include "compiler.h"
+
+typedef struct {
          unsigned int bat_too_hot:1;
          unsigned int bat_over_voltage:1;
          unsigned int bat_under_voltage:1;
          unsigned int bat_implausible_capacity:1;
          unsigned int bat_state_machine_error:1;
          unsigned int bat_no_battery_detected:1;
-         } __xdata battery_error;
+         } battery_error_type ;
 
-extern struct {
+//extern  battery_error_type __xdata battery_error;
+
+typedef struct {
          unsigned int voltage_mV;
            signed int current_mA;
          unsigned long charge_mAs;
@@ -59,7 +65,9 @@ extern struct {
 
          // as sent to host
          unsigned char errorcode_0x1f;
-       } __xdata battery;
+       } battery_type;
+
+extern battery_type __xdata battery;
 
 
 enum {
@@ -70,12 +78,37 @@ enum {
       PS_TYPE_DONT_CARE_LINUX_SETS_PWM
      };
 
-
+#if 0
 extern struct {
         unsigned char ps_type;
         unsigned int voltage_mV;
         unsigned char unstable; /* counts up */
       } __xdata power_supply;
+#endif
 
+typedef enum
+{
+    IGNORE,
+    ROM_OFF,
+    ACTION_0,
+    ACTION_1,
+    ACTION_2,
+    //GET_LAST_USED,
+} action_type;
+
+
+typedef struct
+{
+//(t, I, V, R, T, I*t, dV/dt, dT/dt).
+       uint32_t t_ms;
+       uint32_t delta_t_ms;
+       uint16_t U_mV;
+        int16_t I_mA;
+       uint16_t Q_raw;
+       uint16_t R_mOhm;
+        int16_t T_cCelsius; /* 1/100 degree Celsius */
+} battery_is_type;
+
+extern bool battery_news;
 
 bool handle_battery(void);

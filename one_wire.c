@@ -22,51 +22,42 @@
    what you give them.   Help stamp out software-hoarding!
 -------------------------------------------------------------------------*/
 
-/*
-   Completely untested.
- */
-
 #include <stdbool.h>
 #include "kb3700.h"
 #include "ds2756.h"
+#include "idle.h"
 #include "one_wire.h"
 #include "states.h"
 #include "timer.h"
+#include "uart.h"
 
 /* see also: http://www.ibutton.com/
  */
 
-#define FLAG_BUSY  (0x80) /*defining flags*/
+#define FLAG_BUSY  (0x80) /* defining flags */
 #define FLAG_RESET (0x40)
-#define FLAG_WRITE (0x20)
-#define TRANSFER_BUSY (transfer_state & FLAG_BUSY)
+#define TRANSFER_BUSY (transfer_state & FLAG_BUSY)  /* maybe also: (TR1) */
 
-static volatile
-enum
+static volatile enum
 {
-    T_STATE_INIT_WRITE = 0xe0 | 7, /*masking*/
-    T_STATE_INIT_READ  = 0xc0 | 7,
-    T_STATE_READ       = 0x80 | 0x18 | 0x07,
-    T_STATE_WRITE      = 0xa0 | 0x08 | 0x07,
-    T_STATE_IDLE       = 0x00
+    T_STATE_INIT = FLAG_BUSY | FLAG_RESET | 0x02,
+    T_STATE_RW   = FLAG_BUSY              | 0x08,
+    T_STATE_IDLE = 0x00
 } transfer_state;
 
-static volatile unsigned char transfer_byte;
+volatile unsigned char __pdata ow_transfer_buf[16]; /* <=16 allows use of nibbles in transfer_cnt */
+static volatile unsigned char __pdata *transfer_ptr;
+static volatile unsigned char __pdata transfer_cnt; /* upper nibble for TX, lower nibble for RX */
 
-//! Timings for DS2756 from data sheet (050806) Pag 3 of 26
-#define T_REC_MIN   (  1)
-#define T_LOW0_MIN  ( 60)
-#define T_LOW1_MIN  (  1)
-#define T_RSTH_MIN  (480)
-#define T_RSTL_MIN  (480)
-#define T_PDH_MIN   ( 15)
-#define T_PDL_MIN   ( 60)
-#define T_PDL_MAX   (240)
-#define T_SLOT_MIN  ( 60)
-#define T_SLOT_MAX  (120)
+struct ow_transfer_type __xdata * __pdata owt_active;
 
-//! The timings we actually use (why are they different?)
-#define T_REC_USED   (T_REC_MIN  + 1)
+
+// Timings for DS2756 from data sheet (050806) Pag 3 of 26
+
+// TBD check timing against: http://www.maxim-ic.com/appnotes.cfm/appnote_number/126
+
+#define T_REC_USED   (2)
+/*
 #define T_LOW0_USED  (T_LOW0_MIN + 1)
 #define T_LOW1_USED  (T_LOW1_MIN + 1)
 #define T_HI_AFTER_LOW0_USED (T_TIME_SLOT_USED - T_LOW0_USED)
@@ -78,309 +69,381 @@ static volatile unsigned char transfer_byte;
 #define T_PDL_BEFORE_SAMPLE_USED  (T_PDL_MIN  - 5)
 #define T_PDL_AFTER_SAMPLE_USED   (T_PDL_MAX - T_PDL_BEFORE_SAMPLE_USED + 1)
 #define T_TIME_SLOT_USED (100)
+*/
 
 //! bit mask for the 1-wire line (DQ)
 #define DQ (0x04)
 
-//! \warning protect accesses to GPIOD00
+//! \warning protect accesses to GPIOEOE0
 /*! see http://en.wikipedia.org/wiki/Atomic_operation */
-#define DQ_HIGH() do {GPIOED0 |=  DQ;} while(0) /*High DQ 
-masking*/
-#define DQ_LOW()  do {GPIOED0 &= ~DQ;} while(0) /*low DQ masking 
-*/
-#define DQ_IS_HIGH   (GPIOEIN0 & DQ) /*DQ is High Pin3 of 
-KB3700*/
+#define DQ_HIGH() do {GPIOEOE0 &= ~DQ;} while(0)
+#define DQ_LOW()  do {GPIOEOE0 |=  DQ;} while(0)
+#define DQ_IS_HIGH   (GPIOEIN0 & DQ)
 #define DQ_IS_LOW    (!DQ_IS_HIGH)
 
-#define GPIOD00_ATOMIC_ON()  do{ TIMER1_IRQ_DISABLE(); } while (0)
-#define GPIOD00_ATOMIC_OFF() do{ TIMER1_IRQ_ENABLE();  } while (0)
-
-#define TIMER1_IRQ_ENABLE()  do {ET1=1;} while(0)
-#define TIMER1_IRQ_DISABLE() do {ET1=0;} while(0)
-
-#define SET_TIMER_NEXT_EVENT_US(us) do \
-    { \
-        TMR1 = -(unsigned int)(((SYSCLOCK/1000u)/12u)*(us)/1000u); \
-        TF1 = 0; \
-    } \
+//! us has to be >1
+#define SET_TIMER_NEXT_EVENT_US(us) do                                       \
+    {                                                                        \
+        /* would have expected to /12 instead /24 seems to be ok */          \
+        TMR1 = -(unsigned int)((((SYSCLOCK/1000u)/24u)*(us)+500)/1000u);     \
+        TF1 = 0;                                                             \
+    }                                                                        \
     while(0)
 
 
-__bit ow_busy()
+bool ow_busy()
 {
     return TRANSFER_BUSY;
 }
 
-//! Prepare single byte read and let the IRQ do the rest
-/*! \see TRANSFER_BUSY (but do not busy wait on it)
- */
-void ow_read_byte_init()
+
+void ow_dump()
 {
-    /* well this byte obviously has several uses... */
-    transfer_state = FLAG_BUSY | 0x18 | 0x07; // !!
-
-    /* 0xff should be a good default.
-       If the device would not respond for whatever
-       reason we'd read 0xff anyway */
-    transfer_byte = 0xff;
-
-    SET_TIMER_NEXT_EVENT_US(T_REC_USED);
-    TIMER1_IRQ_ENABLE();
-
+    putspace();
+    puthex( transfer_state );
+    putspace();
+    puthex( transfer_cnt );
 }
 
-
-//! Prepare single byte write and let the IRQ do the rest
-/*! \see TRANSFER_BUSY (but do not busy wait on it)
+//! Prepare One Wire BUS transfer
+/*! using transfer_buf[] both as output and input buffer
+    \see TRANSFER_BUSY (but do not busy wait on it)
  */
-void ow_write_byte_init(unsigned char b)
+void ow_transfer_init( unsigned char num_tx, unsigned char num_rx )
 {
-    if( !data_ds2756.serial_number_valid )
-    {
-        /* you want to write and do not know whom you are writing? */
-        data_ds2756.error.illegal_write = 1;
+    if( /* basic check if parameter is OK */
+        num_rx > sizeof ow_transfer_buf ||
+        num_tx > sizeof ow_transfer_buf ||
 
-        /* please fetch a book from the New Age section. */
-        return;
-    }
+        /* Do not yet allow some commands, this is not really secure: */
+        ow_transfer_buf[0] == 0x6a || ow_transfer_buf[0] == 0x6c || ow_transfer_buf[0] == 0x48 ||
+        ow_transfer_buf[1] == 0x6a || ow_transfer_buf[1] == 0x6c || ow_transfer_buf[1] == 0x48 ||
 
-    if( data_ds2756.error.c )
-    {
+        ow_busy()
+
+
         /* Host should have noticed _any_ previous error.
            If the host has seen (and cleared) the flags
-           he may proceed on his own resposibility. */
-        data_ds2756.error.illegal_write = 1;
+           he may proceed on his own resposibility: */
+//        data_ds2756.error.c
+
+//     /* you want to write and do not know whom you are writing? */
+//     (!data_ds2756.serial_number_valid && (WRITE LOCK COPY))
+
+      )
+    {
+        data_ds2756.error.internal_error = 1;
         return;
     }
 
-    /* setting up info for the IRQ.
-       Obviously this byte has several uses. The uses
-       might differ between READ/WRITE/RESET mode.
-       Instead of reading some semi-maintained comment
-       here, please only trust its usage within the IRQ */
-    transfer_state = FLAG_BUSY | FLAG_WRITE | 0x08 | 0x07;
-    transfer_byte = b;
+    /* setting up info for the IRQ */
+    transfer_state = T_STATE_INIT;
+    transfer_ptr = &ow_transfer_buf[0];
+    transfer_cnt = (num_tx<<4) | num_rx;
+
+    /* preparing IRQ */
+    DQ_HIGH();
 
     SET_TIMER_NEXT_EVENT_US(T_REC_USED);
     TIMER1_IRQ_ENABLE();
+    TR1 = 1;
+
+//while(ow_busy())
+//    { putcrlf(); ow_dump();};
 }
 
 
-
-unsigned char ow_get_read_byte(void)
+#if 0
+// it would be nicer to directly work on the struct
+// but within the IRQ the resources are not there.
+void ow_transfer_init_nice_but_too_bulky( struct ow_transfer_type __xdata *owt )
 {
-    // we should _never_ need to enter the polling loop here!!!
-    // Now how is this meant?
-    // The higher level code (state-machine?)
-    // should only call this routine
-    // if it is known to succeed immediately.
-    //
-    // We rely on a quickly running main loop
-    if( TRANSFER_BUSY)
-    {
-        /* set error flag for unclean call */
-        data_ds2756.error.busy_wait = 1;
+    unsigned char i;
+    unsigned char tx_len = owt->TX_len;
 
-        /* enter polling loop */
-        while( TRANSFER_BUSY )
-            ;
-    }
-    return transfer_byte;
+    for(i=0; i<tx_len; i++)
+        ow_transfer_buf[i] = owt->buf[i];
+
+    owt->error.c = data_ds2756.error.c;
+    owt_active = owt;
+    ow_transfer_init( owt->TX_len, owt->TX_len );
 }
 
-void ow_reset_and_presence_detect_init(void)
+//! transfer the (quickly accessable) data used in IRQ to the xdata memory
+/*! (this could be done within IRQ but implemented in C uses too much resources)
+ */
+void ow_finish()
 {
-    transfer_state = FLAG_BUSY | FLAG_RESET | 6;
-    /* would mean "not detected" */
-    transfer_byte = 0x00;
+    unsigned char rx_len = owt_active->RX_len;
+    unsigned char __xdata *ptr = owt_active->buf;
+    unsigned char i;
+
+    for(i=0; (unsigned char)i < rx_len; i++)
+        *ptr++ = ow_transfer_buf[i] ;
+}
+#endif
+
+
+void ow_init()
+{
+    /* setting data to be output to low! (switching is done by enabling/disabling drivers) */
+    GPIOED0  &= ~DQ;
+    GPIOEIN0_0xfc64 |=  DQ;
 
     DQ_HIGH();
-    SET_TIMER_NEXT_EVENT_US(T_RSTH_USED);
-    TIMER1_IRQ_ENABLE();
 }
 
-unsigned char ow_reset_and_presence_detect_read(void)
+
+void timer1_init()
 {
-     return ow_get_read_byte();
+    TR1 = 0;
+    TH1 = 0;
+    TL1 = 0;
+    TMOD &= 0x0f;
+    TMOD |= 0x10; /* 16 bit timer */
+    TF1 = 0;
+    PT1 = 1; /* high priority interrupt!! */
 }
 
 
-/*! timer IRQ that handles (one byte of) One-Wire communication
+//#define DEBUG_TOGGLE do{GPIOD10 ^= 0x40;} while(0)      /* a boguous hack... */
+#define DEBUG_TOGGLE do{} while(0)
+
+
+/*! timer IRQ that handles One-Wire communication
 
     This routine is ugly. It does busy wait during the interrupt.
-    It does not allow other IRQ to last longer than xx us.
+    It does not allow IRQ to be disabled for longer than x us!
 
-    (We could use high priority IRQ to avoid this
-    but as post B4 XOs seem to have hardware support for One-Wire
-    that probably is not worth it)
-
-    Stack footprint:
+    Stack footprint on top (!!!) of other IRQ stack footprints:
     2 for return address
-    5 for registers R2, DPH, DPL, ACC, PSW
-    x for the computed jump within the switch statement
+    x for registers DPH, DPL, ACC, PSW
+
+    The resource usage for this one-wire routine is substantial 
+    (in terms of data memory and of the time global IRQ may be disabled)
  */
-void timer1_interrupt(void) __interrupt (3)
+void timer1_interrupt(void) __interrupt(3) __using(1)
 {
 
-    switch( transfer_state>>4 )
-    {
-        case T_STATE_INIT_WRITE>>4:
+#if 0
+   /* if short on data memory use keyword "__naked" and do this
+      (and the inverse at the exit of the IRQ).
+      Or recode the complete IRQ in assembler */
+   __asm
+       push     psw
+       mov      psw,#0x08    ; switching to register bank 1
+       mov      r7,a         ; instead of pushing onto stack, store in unused register
+       mov      r6,dph
+       mov      r5,dpl
+       ; r1 and r4 in bank 1 are eventually free to use for transfer_state et al.
+   __endasm;
+#endif
 
-            /* a reset before a read or write */
-            switch( transfer_state & 0x07 )
+    if( !(transfer_state & FLAG_RESET) )
+    {
+        /* FLAG_RESET not set, should be a read or a write */
+        if( transfer_state )
+        {
+            /* both TX and RX start with at least 1 us DQ low */
+            DQ_LOW();
+
+            if( transfer_cnt & 0xf0 ) /* is it a write? */
             {
-                case 6:
-                    /* check for hardware fault part 1.
-                       Note, the check here might not notice a small
-                       capacitor connected to DQ.
-                       (Ignoring that failure mode and hoping CRC will notice)
-                     */
-                    if( DQ_IS_LOW )
+                /* TX */
+
+                unsigned char c;
+
+                c = *transfer_ptr;
+                if( c & 0x01 )
+                    DQ_HIGH();
+
+                DEBUG_TOGGLE;
+
+                /* note: intentionally no attempt to be quicker in case a 1 was written */
+                SET_TIMER_NEXT_EVENT_US( 49 );
+
+                /* roll byte - after 8 iterations it is there again */
+                c = (c >> 1) | (c << 7);
+                *transfer_ptr = c;
+
+                /* all bits of the byte transferred? */
+                if( !(--transfer_state & 0x0f) )
+                {
+                    /* decrement upper nibble */
+                    transfer_cnt -= 0x10;
+                    if( transfer_cnt & 0xf0 )
                     {
-                        data_ds2756.error.line_stuck_low = 1;
-                        /* giving up. Setting state for a quick exit */
-                        transfer_state = T_STATE_IDLE;
-                        break;
+                        /* proceed to next byte to transmit */
+                        transfer_ptr++;
+                        transfer_state |= 0x08;
                     }
+                    else
+                    {
+                        if( transfer_cnt )
+                        {
+                            /* proceed to the receiving part */
+                            transfer_ptr = &ow_transfer_buf[0];
+                            transfer_state |= 0x08;
+                        }
+                        else
+                        {
+                            /* seems to have no receiving part */
+                            transfer_state = T_STATE_IDLE;
+                            TIMER1_IRQ_DISABLE();
+                            busy = 1; /* done. Do not sleep now */
+                            while( !TF1 )
+                                ;
+                            TR1 = 0;
+                        }
+                    }
+                }
+
+                while( TH1 )
+                    ;
+
+                /* this delay decides how much CPU power is left when
+                   one-wire writes are active. And how long IRQ may
+                   be disabled. Take care of t(slot),max */
+                SET_TIMER_NEXT_EVENT_US( 20 );  // ooops... this is short!
+
+                DQ_HIGH();
+            }
+            else
+            {
+                /* RX */
+
+                unsigned char c;
+
+                DQ_HIGH();
+
+                SET_TIMER_NEXT_EVENT_US( 2 );
+
+                c = *transfer_ptr;
+                c >>= 1;
+
+                while( TH1 )
+                    ;
+
+                /* this delay decides how much CPU power is left when
+                   one-wire reads are active. And how long IRQ may
+                   be disabled. Take care of t(slot),max */
+                SET_TIMER_NEXT_EVENT_US( 40 );
+
+                DEBUG_TOGGLE;
+
+                if( !DQ_IS_LOW )
+                    c |= 0x80;
+                *transfer_ptr = c;
+
+                /* all bits within the byte transferred ? */
+                if( !(--transfer_state & 0x0f) )
+                {
+                    /* next byte */
+                    transfer_cnt--;
+
+                    if( transfer_cnt ) /* upper nibble known to be zero */
+                    {
+                        /* not yet done */
+                        transfer_ptr++;
+                        transfer_state |= 0x08;
+                    }
+                    else
+                    {
+                        /* done */
+                        transfer_state = T_STATE_IDLE;
+                        TIMER1_IRQ_DISABLE();
+                        while( !TF1 )
+                            ;
+                        TR1 = 0;
+                        /* new data completely read. Do not sleep now */
+                        busy = 1;
+                    }
+                }
+            }
+        }
+        else /* if( transfer_state ) */
+        {
+            /* transfer_state = T_STATE_IDLE;  redundant */
+            TIMER1_IRQ_DISABLE();
+            TR1 = 0;
+        }
+    }
+    else /* if(!(transfer_state & FLAG_RESET)) */
+    {
+        /* this is the reset */
+        switch( transfer_state & 0x03 )
+        {
+            case 2:
+                /* check for hardware fault part 1.
+                   Note, the check here might not notice a small
+                   capacitor connected to DQ.
+                   (Ignoring that failure mode and hoping CRC will notice)
+                 */
+                if( DQ_IS_LOW )
+                {
+                    data_ds2756.error.line_stuck = 1;
+                    /* giving up. Setting state for a quick exit */
+                    transfer_state = T_STATE_IDLE;
+                }
+                else
+                {
                     /* beginning of reset */
                     DQ_LOW();
                     SET_TIMER_NEXT_EVENT_US( 480 + 1 );
                     transfer_state--;
-                    break;
+                }
+                break;
 
-                case 5:
-                    /* check for hardware fault part 2.
-                       Note, the check here might not notice if the
-                       Output FET has degraded due to ESD.
-                       (Ignoring that failure mode and hoping CRC will notice)
-                     */
-                    if( DQ_IS_HIGH )
-                    {
-                        data_ds2756.error.line_stuck_high = 1;
-                        /* giving up. Setting state for a quick exit */
-                        transfer_state = T_STATE_IDLE;
-                        break;
-                    }
+            case 1:
+                /* check for hardware fault part 2.
+                   Note, the check here might not notice if the
+                   Output FET of the one-wire device has degraded due to ESD.
+                   (Ignoring that failure mode and hoping CRC will notice)
+                 */
+                if( DQ_IS_HIGH )
+                {
+                    data_ds2756.error.line_stuck = 1;
+                    /* giving up. Setting state for a quick exit */
+                    transfer_state = T_STATE_IDLE;
+                }
+                else
+                {
                     /* end of reset */
                     DQ_HIGH();
-                    SET_TIMER_NEXT_EVENT_US( 480 + 1 );
-                    transfer_state--;
-                    break;
-
-                case 4:
-                    DQ_LOW();
                     SET_TIMER_NEXT_EVENT_US( 60 + 1 );
                     transfer_state--;
-                    break;
+                }
+                break;
 
-                case 3:
-                    DQ_HIGH();
-                    SET_TIMER_NEXT_EVENT_US( 240 - 60 - 5 );
-                    transfer_state--;
-                    // busy wait during IRQ :(
-                    while (!TF1)
-                        ;
-                    // intentionally no break;
-
-                case 2:
-                    if( DQ_IS_LOW )
-                    {
-                        transfer_byte++; /**< known to have been 0x00 before */
-                        data_ds2756.error.no_device = 0;
-                    }
-                    else
-                    {
-                        data_ds2756.error.no_device = 1;
-                        data_ds2756.serial_number_valid = 0; /**< being rude */
-                    }
-                    data_ds2756.error.no_device_flag_is_invalid = 0;
-                    SET_TIMER_NEXT_EVENT_US( 60 + 5  + 1 );
-                    transfer_state--;
-                    break;
-
-                case 0xff: /* dummy case to inhibit jumptable generation,
-                              might save 2 byte stack space */
-
-                case 1:
-                    transfer_state = T_STATE_WRITE;
-                    break;
-
-                default:
+            case 0:
+                if( DQ_IS_LOW )
+                {
+                    data_ds2756.error.no_device = 0;
+                    transfer_state = T_STATE_RW;
+                }
+                else
+                {
+                    data_ds2756.error.no_device = 1;
+                    data_ds2756.serial_number_valid = 0; /**< being rude */
                     transfer_state = T_STATE_IDLE;
+                }
 
-            }
-            break;
+                data_ds2756.error.no_device_flag_is_invalid = 0;
+                /* wait until one-wire device freed the bus again */
+                SET_TIMER_NEXT_EVENT_US( 240 + 1 );
+                break;
 
-
-        case T_STATE_WRITE >> 4:
-
-            DQ_LOW();
-
-            SET_TIMER_NEXT_EVENT_US( 2 );
-            while( !TF1 )
-                ;
-            if( transfer_byte & 0x01 )
-                DQ_HIGH();
-
-            /* roll byte - after 8 iterations it is there again */
-            transfer_byte = (transfer_byte>>1) | (transfer_byte<<7);
-
-            /* note: intentionally no attempt to be quicker in case a 1 was written */
-            SET_TIMER_NEXT_EVENT_US( 60 - 2 );
-            while( !TF1 )
-                ;
-            DQ_HIGH();
-
-            /* this delay decides how much CPU power is left when
-               one-wire writes are active. Take care that t(slot),max
-               is in spec even if another IRQ hits in between */
-            SET_TIMER_NEXT_EVENT_US( 20 );
-
-            if( transfer_state & 0x07 )
-            {
-                transfer_state--;
-            }
-            else
-            {
-                while( !TF1 )
-                    ;
-                transfer_state =  T_STATE_IDLE;
-                TIMER1_IRQ_DISABLE();
-            }
-            break;
+//                case 0xff: /* dummy case to inhibit jumptable generation,
+//                              might save 2 byte stack space */
 
 
-        case T_STATE_READ >> 4:
+            default:
+                /* internal error */
+                transfer_state = T_STATE_IDLE;
 
-            DQ_LOW();
-            SET_TIMER_NEXT_EVENT_US( 2 );
-            while( !TF1 )
-                ;
-            DQ_HIGH();
-
-            SET_TIMER_NEXT_EVENT_US( 14 );
-            while( !TF1 )
-                ;
-
-            transfer_byte <<= 1;
-            if( !DQ_IS_LOW )
-                transfer_byte++;
-
-            SET_TIMER_NEXT_EVENT_US( 60 - 14 - 2 );
-
-            if( transfer_state & 0x07 )
-            {
-                transfer_state--;
-            }
-            else
-            {
-                while( !TF1 )
-                    ;
-                transfer_state =  T_STATE_IDLE;
-                TIMER1_IRQ_DISABLE();
-            }
-
-            break;
+        }
     }
+
+    DEBUG_TOGGLE;
 }
 

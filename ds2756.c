@@ -32,6 +32,8 @@
 #include "one_wire.h"
 #include "states.h"
 #include "timer.h"
+#include "uart.h"
+#include "watchdog.h"
 
 /* see also: http://www.ibutton.com/
  */
@@ -40,13 +42,14 @@
 /*! adapt to Maxim/Dallas DS2756 */
 struct data_ds2756_type __xdata data_ds2756;
 
+static unsigned char __xdata debug_ds2756_printed;
 
 //! Handling the ds2756 is probably among the more tricky parts
 /*! It:
      - has hard realtime requirements.
        (too long to nicely busy wait, too short to really tolerate other IRQ)
      - updates its internal registers asynchronously (in intervals
-       of 4/88/2800 milliseconds)
+       of 4/88/220/2800 milliseconds)
      - needs to take commands from either host communication or
        from battery state machine
      - is used for measuring 4 different physical quantities
@@ -74,7 +77,7 @@ struct data_ds2756_type __xdata data_ds2756;
 bool handle_ds2756(void)
 {
     static unsigned char __pdata state_expensive = 0;
-    static unsigned char __xdata second_last_presence_detect = 0xff;
+    static unsigned char __xdata my_timer = 0xff;
 
     unsigned char state = state_expensive;
 
@@ -86,79 +89,94 @@ bool handle_ds2756(void)
             /* we do not know for sure but this is a good default */
             data_ds2756.error.no_device = 1;
 
-            /* should be high anyway.. */
-//            DQ_HIGH();
-
             /* skipping wait - try soon */
             state = 2;
             break;
 
         case 1:
+            /* battery not or not yet found */
+
+            /* here? */
+            watchdog_all_up_and_well |= WATCHDOG_ONE_WIRE_IS_FINE;
+
             /* only start a new try every xx seconds */
-            if ( 0xfc & (second_last_presence_detect ^ (unsigned char)second) )
+            if (0xfc & ((unsigned char)second ^ my_timer) )
             {
                 state++;
             }
             break;
 
         case 2:
-            second_last_presence_detect = (unsigned char)second;
-            ow_reset_and_presence_detect_init();
+            my_timer = (unsigned char)second;
+            debug_ds2756_printed = 0;
+            ow_transfer_buf[0] = 0x33;
+            ow_transfer_init( 1, 8 );
             state++;
             break;
-
 
         case 3:
             if(!ow_busy())
             {
                 if( !data_ds2756.error.no_device )
                 {
-                    /* fine! Reset previous CRC error */
-                    data_ds2756.error.crc_fail = 0;
+                    unsigned char i;
 
+                    /* copy serial number */
+                    for( i = 0; i < sizeof data_ds2756.serial_number; i++ )
+                    {
+                         data_ds2756.serial_number[i] = ow_transfer_buf[i+1];
+                    }
                     state++;
                 }
                 else
                 {
-                    /* back to previous state, try again once in a while */
-                    state--;
+                    /* try again once in a while */
+                    state = 1;
                 }
-               data_ds2756.error.no_device_flag_is_invalid = 0;
+                data_ds2756.error.no_device_flag_is_invalid = 0;
             }
             break;
 
-
-   //     case 2: get id...
-
-        case 4: /* should be get ID 
-                   for now simply output something */
-            ow_write_byte_init(0x12);
-            state++;
-            break;
-
-        case 5:
-            if(!ow_busy())
+        case 4: /* do a CRC check of the ID */
             {
-                if( 1 /* not_yet_six_bytes*/ )
-                    state--;
-                else
+                unsigned char crc = 0;
+/*
+                unsigned char i;
+                unsigned char __code mask[] = { 0x01,0x02,0x04,0x08, 0x10,0x20,0x40,0x80 };
+
+                for( i = 0; i < 56; i++ )
                 {
-                    if (1)
+                    if( ow_transfer_buf[i/8] & mask[i&0x07] )
+                        ...
+                }
+
+*/
+
+                if( 1 /* crc == ow_transfer_buf[7] */ )
+                {
+                    data_ds2756.error.crc_fail = 0;
+                    data_ds2756.serial_number_valid = 1;
+
+                    /* check One-wire device ID */
+                    if( ow_transfer_buf[0] == 0x35 )
                     {
-                        /* ID CRC not ok, retry soon */
-                        state = 2;
+                        state++;
                     }
                     else
                     {
-                        /* CRC ok */
-                        data_ds2756.serial_number_valid = 1;
-                        state++;
+                        state = 20;
                     }
+                }
+                else
+                {
+                    data_ds2756.error.crc_fail = 1;
+                    /* try again once in a while */
+                    state = 1;
                 }
             }
             break;
 
-        case 6:
+        case 5:
             /* now ready to process commands from either
                battery.c or host command */
 
@@ -167,6 +185,130 @@ bool handle_ds2756(void)
                battery state-machine.
                So handle commands from battery first
                (or see that at least some get handled) */
+
+            /* here: ? */
+            watchdog_all_up_and_well |= WATCHDOG_ONE_WIRE_IS_FINE;
+
+            if( data_ds2756.host_transfer.request_new )
+            {
+                state = 10;
+            }
+            else
+            {
+                // for now!! :
+                if (0xfe & ((unsigned char)second ^ my_timer) )
+                {
+                    my_timer = (unsigned char)second;
+                    state++;
+                }
+            }
+
+            break;
+
+        case 6:
+            ow_transfer_buf[0] = 0xcc;  /* skip net address */
+            ow_transfer_buf[1] = 0x69;  /* read */
+            ow_transfer_buf[2] = 0x0c;  /* address */
+            ow_transfer_init( 3, 6 );
+
+            state++;
+
+            break;
+
+        case 7:
+
+            if(!ow_busy())
+            {
+                if( !data_ds2756.error.no_device )
+                {
+                    unsigned int u;
+
+                    u = *(unsigned int *)&ow_transfer_buf[0];
+                    data_ds2756.voltage_raw = (u>>8) | (u<<8);
+
+                    u = *(unsigned int *)&ow_transfer_buf[2];
+                    data_ds2756.current_raw = (u>>8) | (u<<8);
+
+                    u = *(unsigned int *)&ow_transfer_buf[4];
+                    data_ds2756.charge_raw = (u>>8) | (u<<8);
+
+                    state++;
+                }
+                else
+                    state = 1;
+            }
+            break;
+
+        case 8:
+            ow_transfer_buf[0] = 0xcc;  /* skip net address */
+            ow_transfer_buf[1] = 0x69;  /* read */
+            ow_transfer_buf[2] = 0x18;  /* address */
+            ow_transfer_init( 3, 4 );
+
+            state++;
+
+            break;
+
+        case 9:
+
+            if(!ow_busy())
+            {
+                if( !data_ds2756.error.no_device )
+                {
+                    unsigned int u;
+
+                    u = *(unsigned int *)&ow_transfer_buf[0];
+                    data_ds2756.temp_raw = (u>>8) | (u<<8);
+                    u = *(unsigned int *)&ow_transfer_buf[2];
+                    data_ds2756.avg_current_raw = (u>>8) | (u<<8);
+
+                    if( !debug_ds2756_printed )
+                    {
+                        debug_ds2756_printed = 1;
+                        dump_ds2756();
+                    }
+                    state = 5;
+                }
+                else
+                    state = 1;
+            }
+            break;
+
+        case 10:
+            {
+                unsigned char i;
+                unsigned char t = data_ds2756.host_transfer.TX_len;
+                for( i = 0; i < t; i++)
+                    ow_transfer_buf[i] = data_ds2756.host_transfer.buf[i];
+
+                data_ds2756.host_transfer.request_completed = 0;
+                ow_transfer_init( t, data_ds2756.host_transfer.RX_len );
+            }
+            state++;
+            break;
+
+        case 11:
+
+            if(!ow_busy())
+            {
+                unsigned char i;
+                unsigned char r = data_ds2756.host_transfer.RX_len;
+                for( i = 0; i < r; i++)
+                    data_ds2756.host_transfer.buf[i] = ow_transfer_buf[i];
+
+                data_ds2756.host_transfer.request_new = 0;
+                data_ds2756.host_transfer.request_completed = 1;
+
+                state = 5;
+            }
+            break;
+
+        case 20:
+            /* unknown device */
+            /* cannot handle it but should maybe we should allow host to read registers? */
+
+            /* for now: */
+            state = 1;
             break;
 
         default:
@@ -183,4 +325,74 @@ bool handle_ds2756(void)
    STATES_UPDATE(ds2756, state);
 
    return 0;
+}
+
+
+void dump_ds2756()
+{
+    unsigned char i;
+
+    putstring("\r\nSer:");
+    for( i = 0; i < sizeof data_ds2756.serial_number; i++ )
+        puthex(data_ds2756.serial_number[i]);
+
+    putstring(" U_raw:");
+    puthex(data_ds2756.voltage_raw>>8);
+    puthex(data_ds2756.voltage_raw);
+
+    putstring(" I_raw:");
+    puthex(data_ds2756.current_raw>>8);
+    puthex(data_ds2756.current_raw);
+
+    putstring(" I_avg_raw:");
+    puthex(data_ds2756.avg_current_raw>>8);
+    puthex(data_ds2756.avg_current_raw);
+
+    putstring(" Q_raw:");
+    puthex(data_ds2756.charge_raw>>8);
+    puthex(data_ds2756.charge_raw);
+
+    putstring(" T_raw:");
+    puthex(data_ds2756.temp_raw>>8);
+    puthex(data_ds2756.temp_raw);
+
+    putstring(" E:");
+    puthex(data_ds2756.error.c);
+}
+
+
+bool dump_ds2756_all()
+{
+    unsigned char i,k;
+
+    if( ow_busy() ) // hmmm, racy, we still could take over another transfer...
+        return 0;
+
+    for( i = 0; i < 0x8f; i += 8 )
+    {
+        putstring("\r\nDS2756 ");
+        puthex(i);
+        putchar(':');
+
+        ow_transfer_buf[0] = 0xcc;  /* skip net address */
+        ow_transfer_buf[1] = 0x69;  /* read */
+        ow_transfer_buf[2] = i;     /* address */
+        ow_transfer_init( 3, 8 );
+
+        while( ow_busy() )
+            ;
+
+        for( k = 0; k<8; k++ )
+        {
+            if( k == 4 )
+                putspace();
+            putspace();
+            if( data_ds2756.error.no_device )
+                putstring("--");
+            else
+                puthex( ow_transfer_buf[k] );
+        }
+    }
+
+    return 1;
 }

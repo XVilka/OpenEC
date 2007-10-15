@@ -1,5 +1,5 @@
 /*-------------------------------------------------------------------------
-   charge_sched.c - table based charge current scheduler
+   charge_sched.h - table based charge current scheduler
 
    Copyright (C) 2007  Frieder Ferlemann <Frieder.Ferlemann AT web.de>
 
@@ -53,7 +53,7 @@ typedef struct
 
     action_and_val_uint16_type U_mV;
     action_and_val_int16_type  I_mA;
-    action_and_val_uint16_type Q_raw;        /* ... */
+    action_and_val_int16_type  Q_raw;        /* ... */
     action_and_val_uint16_type R_mOhm;       /* not handled */
     action_and_val_int16_type  T_cCelsius;   /* in 1/100 degree Celsius */
 

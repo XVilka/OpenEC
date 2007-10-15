@@ -36,6 +36,8 @@ extern int get_tick(void);
 
 extern unsigned long get_time(void);
 
+extern unsigned long get_time_ms(void);
+
 extern void set_time(unsigned long s);
 
 extern void timer_gpt3_interrupt(void) __interrupt(0x17);
