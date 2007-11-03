@@ -26,7 +26,7 @@
 #include "kb3700.h"
 
 void putchar(unsigned char c);
-unsigned char getchar();
+char getchar();
 bool char_avail( void );
 void tx_drain( void );
 

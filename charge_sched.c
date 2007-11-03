@@ -73,7 +73,13 @@
 #include <stdbool.h>
 #include "battery.h"
 #include "charge_sched.h"
+#include "led.h"
+#include "power.h"
+#include "states.h"
 #include "timer.h"
+#include "uart.h"
+
+#define DEBUG 1
 
 extern void set_charge_mode( unsigned char cur );
 
@@ -113,12 +119,12 @@ battery_compare_type __code compare_rom_hi_charge_NiMH =
 {
     {0,         0},             /* t_ms */
      3600*1000ul,               /* delta_t_ms */ /* give up after 1 minute / 1 hour? */
-    {ROM_OFF,   5*1400},        /* U_mV */       /* 5 cells. Not T corrected */
+    {ROM_OFF,   5*1380},        /* U_mV */       /* 5 cells. Not T corrected */
     {ROM_OFF,   1000},          /* I_mA */       /* expecting about 400 mA */
-    {0,         0},             /* Q_raw */      /* not trusting this... */
+    {0,         0},             /* Q_raw */      /* do not trust this blindly... */
     {0,         0},             /* R_mOhm */
-    {ROM_OFF,   52-5},          /* T_Celsius */  /* no charging above 52degC. Safety margin */
-    0x80
+    {ROM_OFF,   5200-500},      /* T_Celsius */  /* no charging above 52degC. Safety margin */
+     0x80
 };
 
 
@@ -129,10 +135,10 @@ battery_compare_type __code compare_rom_lo_charge_NiMH =
     {0, 0},
      0,
     {ROM_OFF, 5*200},           /* low voltage. Short circuit? */
-    {ROM_OFF, 100},             /* low current. Open circuit? Could/Should have been detected by voltage */
-    {0, 0},
-    {0, 0},
-    {0, 0},
+    {0, 0},                     /* low current. Open circuit? Could/Should have been detected by voltage */
+    {0, 0},                     /* Q_raw */
+    {0, 0},                     /* R_mOhm */
+    {ROM_OFF,   0},             /* T_Celsius */  /* no charging below 0degC and no quick charge below +15degC? */
     0x80
 };
 
@@ -154,6 +160,12 @@ battery_compare_type __code compare_rom_hi_charge_LiFe =
     {0,         0}              /* initializes the complete struct to zero */
 };
 
+
+/*! dummy */
+void set_charge_mode( unsigned char cur )
+{
+    cur;
+}
 
 
 //! copy memory from code to xdata space.
@@ -210,6 +222,7 @@ void battery_charging_table_set_num( unsigned char num )
 
     num_in_use = num;
 
+    STATES_UPDATE(charge_sched, num_in_use);
 }
 
 unsigned char battery_charging_table_get_num( void )
@@ -232,8 +245,7 @@ void battery_charging_table_init( void )
     memcpy_xc( (void *)&compare_x_hi[3], (void *)&compare_rom_hi_charge_LiFe, sizeof compare_x_hi[0] );
 
     /* NiMH LiFe detection missing here */
-    c_lo_ptr = (void *)&compare_x_lo[2];
-    c_hi_ptr = (void *)&compare_x_hi[2];
+    battery_charging_table_set_num(2);
 
     charging_table_valid = 1;
 }
@@ -257,14 +269,18 @@ bool handle_battery_charging_table( void )
         return 0;
     battery_news = 0;
 
-    /*
-    if( !AC_IN ) // no external power -> nothing to do
+    #if 1
+    /* no external power -> nothing to do?
+       (Loss or reappearing of power could also be handled by an entry
+       within the tables. But maybe it's better not to add the functionality
+       there, rather tell: my table does not apply any more, feed me new entries?)
+     */
+    if( !IS_AC_IN_ON )
     {
         set_charge_mode( 0 );
         return 0;
     }
-    */
-
+    #endif
 
     #if 0
         /* emergency stuff here? */
@@ -280,7 +296,7 @@ bool handle_battery_charging_table( void )
     {
         action = c_hi_ptr->t_ms.act;
     }
-
+    /* the "rest" of the checks should be regular */
     else if( c_hi_ptr->U_mV.act && compare_is.U_mV > c_hi_ptr->U_mV.val )
     {
         action = c_hi_ptr->U_mV.act;
@@ -297,7 +313,7 @@ bool handle_battery_charging_table( void )
     {
         action = c_hi_ptr->T_cCelsius.act;
     }
-
+    /* and now for the pointer holding the lower margins */
     else if( c_lo_ptr->U_mV.act && compare_is.U_mV < c_lo_ptr->U_mV.val )
     {
         action = c_lo_ptr->U_mV.act;
@@ -333,9 +349,19 @@ bool handle_battery_charging_table( void )
     /* and now switch battery charging accordingly... */
 //    set_charge_mode( c_hi_ptr->charging &0xc0 ); /* c_hi_ptr->charging == c_lo_ptr->charging */
 
+    /* LED colour set just to see something */
+    BATT_LED_JINGLE_500ms();
+
+#if DEBUG
+    putstring("\r\nBatt:");
+    puthex(action);
+#endif
+
     /* also tell host... */
 
     num_in_use = action;
+
+    STATES_UPDATE(charge_sched, num_in_use);
 
     return 1;
 }

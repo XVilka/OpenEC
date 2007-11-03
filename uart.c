@@ -137,10 +137,10 @@ void putchar(unsigned char c)
     ES = 1;
 }
 
-//! unsigned? unsigned.
+//! unsigned? unsigned. signed.
 /*! please never poll here. Check buffer before calling.
  */
-unsigned char getchar()
+char getchar()
 {
     unsigned char c;
     unsigned char rx_next_tail;

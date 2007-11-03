@@ -49,27 +49,11 @@ volatile unsigned char __pdata ow_transfer_buf[16]; /* <=16 allows use of nibble
 static volatile unsigned char __pdata *transfer_ptr;
 static volatile unsigned char __pdata transfer_cnt; /* upper nibble for TX, lower nibble for RX */
 
-struct ow_transfer_type __xdata * __pdata owt_active;
-
-
 // Timings for DS2756 from data sheet (050806) Pag 3 of 26
 
 // TBD check timing against: http://www.maxim-ic.com/appnotes.cfm/appnote_number/126
 
 #define T_REC_USED   (2)
-/*
-#define T_LOW0_USED  (T_LOW0_MIN + 1)
-#define T_LOW1_USED  (T_LOW1_MIN + 1)
-#define T_HI_AFTER_LOW0_USED (T_TIME_SLOT_USED - T_LOW0_USED)
-#define T_HI_AFTER_LOW1_USED (T_TIME_SLOT_USED - T_LOW1_USED)
-#define T_RSTH_USED  (T_RSTH_MIN + 1)
-#define T_RSTL_USED  (T_RSTL_MIN + 1)
-#define T_PDH_USED   (T_PDH_MIN  + 1)
-#define T_PDL_USED   (T_PDL_MIN  + 1)
-#define T_PDL_BEFORE_SAMPLE_USED  (T_PDL_MIN  - 5)
-#define T_PDL_AFTER_SAMPLE_USED   (T_PDL_MAX - T_PDL_BEFORE_SAMPLE_USED + 1)
-#define T_TIME_SLOT_USED (100)
-*/
 
 //! bit mask for the 1-wire line (DQ)
 #define DQ (0x04)
@@ -154,6 +138,8 @@ void ow_transfer_init( unsigned char num_tx, unsigned char num_rx )
 
 
 #if 0
+struct ow_transfer_type __xdata * __pdata owt_active;
+
 // it would be nicer to directly work on the struct
 // but within the IRQ the resources are not there.
 void ow_transfer_init_nice_but_too_bulky( struct ow_transfer_type __xdata *owt )
@@ -381,7 +367,7 @@ void timer1_interrupt(void) __interrupt(3) __using(1)
                  */
                 if( DQ_IS_LOW )
                 {
-                    data_ds2756.error.line_stuck = 1;
+                    data_ds2756.error.line_stuck_low = 1;
                     /* giving up. Setting state for a quick exit */
                     transfer_state = T_STATE_IDLE;
                 }
@@ -402,7 +388,7 @@ void timer1_interrupt(void) __interrupt(3) __using(1)
                  */
                 if( DQ_IS_HIGH )
                 {
-                    data_ds2756.error.line_stuck = 1;
+                    data_ds2756.error.line_stuck_high = 1;
                     /* giving up. Setting state for a quick exit */
                     transfer_state = T_STATE_IDLE;
                 }

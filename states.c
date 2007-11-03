@@ -105,7 +105,7 @@ void save_old_states( void )
 
 void print_states_ruler (void)
 {
-     putstring("\r\ntime numb co ma po ba ds wa");
+     putstring("\r\ntime numb co ma po ba ds ch wa");
 }
 
 void print_states (void)
@@ -130,10 +130,12 @@ void print_states (void)
      putspace();
      puthex(states.ds2756);
      putspace();
-     puthex(states.watchdog);
+     puthex(states.charge_sched);
      putspace();
+     puthex(states.watchdog);
 
 #if DEBUG_MATRIX_3x3
+     putspace();
      puthex(GPIOEIN0);
      putspace();
      for(i=0; i<5; i++)

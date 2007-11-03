@@ -32,6 +32,24 @@
 #define TIMER1_IRQ_ENABLE()  do{ET1=1;}while(0)
 #define TIMER1_IRQ_DISABLE() do{ET1=0;}while(0)
 
+typedef union ow_error_type
+{
+    // character as sent to host?
+    unsigned char c;
+    struct
+    {
+        unsigned int internal_error:1;
+        unsigned int busy_wait:1;
+        unsigned int illegal_write:1;
+        unsigned int crc_fail:1;
+
+        unsigned int no_device:1;
+        unsigned int no_device_flag_is_invalid:1;
+        unsigned int line_stuck_low:1;
+        unsigned int line_stuck_high:1;
+    };
+};
+
 
 typedef struct ow_transfer_type
 {
@@ -42,24 +60,8 @@ typedef struct ow_transfer_type
     unsigned int request_new:1;
     unsigned int request_completed:1;
 
-    union
-    {
-        // character as sent to host?
-        unsigned char c;
-        struct
-        {
-            unsigned int internal_error:1;
-            unsigned int busy_wait:1;
-            unsigned int illegal_write:1;
-            unsigned int crc_fail:1;
-
-            unsigned int no_device:1;
-            unsigned int no_device_flag_is_invalid:1;
-            unsigned int line_stuck:1;
-        };
-    } error;
+    union ow_error_type error;
 };
-
 
 
 extern volatile unsigned char __pdata ow_transfer_buf[16];

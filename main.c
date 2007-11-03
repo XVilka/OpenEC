@@ -99,6 +99,7 @@
 #include "one_wire.h"
 #include "ds2756.h"
 #include "idle.h"
+#include "led.h"
 #include "matrix_3x3.h"
 #include "manufacturing.h"
 #include "monitor.h"
@@ -111,13 +112,6 @@
 #include "uart.h"
 #include "unused_irq.h"
 #include "watchdog.h"
-
-
-#define LED_CHG_G_OFF do{GPIOED0 |=  0x08;}while(0)
-#define LED_CHG_G_ON  do{GPIOED0 &= ~0x08;}while(0)
-#define LED_CHG_R_OFF do{GPIOD08 |=  0x04;}while(0)
-#define LED_CHG_R_ON  do{GPIOD08 &= ~0x04;}while(0)
-
 
 //! pre-C stuff
 /*! Code that is executed before C-startup may be placed here.
@@ -213,28 +207,11 @@ void port_init(void)
     /* LED Light# / EC_EAPD??? */
 //    GPIOOE08 |= 0x01;
 
-    /* for now?  */
-    LED_CHG_G_ON;
-    LED_CHG_R_ON;
-    LED_PWR_ON;
+    /* all LED on on power up (for a short while) */
+    LED_CHG_G_ON();
+    LED_CHG_R_ON();
+    LED_PWR_ON();
 }
-
-//! off-load blinking (and off-after-a-while) stuff to non IRQ
-void handle_leds(void)
-{
-    switch ((unsigned char)second & 0x03 )
-    {
-        case 0: LED_CHG_R_ON;
-                break;
-        case 1: LED_CHG_G_ON;
-                break;
-        case 2: LED_CHG_R_OFF;
-                break;
-        case 3: LED_CHG_G_OFF;
-                break;
-    }
-}
-
 
 void handle_debug(void)
 {
@@ -340,10 +317,9 @@ tx_drain();  // oops, UART routines seem not yet clean
     timer1_init();
     battery_charging_table_init();
 
-    LED_CHG_G_OFF;
-    LED_CHG_R_OFF;
-    LED_PWR_OFF;
-
+    LED_CHG_G_OFF();
+    LED_CHG_R_OFF();
+    LED_PWR_OFF();
 
     /* The main loop contains several state machines handling
        various subsystems on the EC.
@@ -368,10 +344,10 @@ tx_drain();  // oops, UART routines seem not yet clean
 
         busy = handle_command();
         busy |= handle_cursors();
-//        busy |= handle_battery();
         handle_leds();
         handle_power();
-        handle_ds2756();
+        handle_ds2756_requests();
+        handle_ds2756_readout();
         busy |= handle_battery_charging_table();
 
         watchdog_all_up_and_well |= WATCHDOG_MAIN_LOOP_IS_FINE;

@@ -49,6 +49,7 @@ typedef struct states_type {
      unsigned char touchpad;
      unsigned char watchdog;
      unsigned int watchdog_pc;
+     unsigned char charge_sched;
 };
 
 //! this variable is meant to be used for debugging purposes only

@@ -114,6 +114,8 @@ static struct
     unsigned long wakeup_second;
 } __pdata power_private;
 
+bool XO_suspended;
+
 #if DIRTY
 
 void power_init(void)
@@ -201,7 +203,7 @@ void handle_power(void)
                 power_private.timer++;
                 if( power_private.timer == (unsigned char)(HZ/10) )
                 {
-                    LED_PWR_ON;
+                    LED_PWR_ON();
                     power_private.state = 1;
                 }
             }
@@ -240,7 +242,7 @@ void handle_power(void)
             {
                 SWITCH_DCON_EN_OFF;
                 SWITCH_WLAN_OFF;
-                LED_PWR_OFF;
+                LED_PWR_OFF();
                 SWITCH_SWI_ON;
                 SWITCH_PWR_BUT_ON;
                 SWITCH_VR_ON_OFF;

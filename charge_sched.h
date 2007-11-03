@@ -29,6 +29,12 @@
 typedef struct
 {
    uint8_t act;
+   uint8_t val;
+} action_and_val_uint8_type;
+
+typedef struct
+{
+   uint8_t act;
    uint16_t val;
 } action_and_val_uint16_type;
 
@@ -71,6 +77,7 @@ typedef struct
 
 
 extern bool charging_table_valid;
+extern battery_is_type __xdata compare_is;
 
 void battery_charging_table_init( void );
 void battery_charging_table_set_lo( unsigned char num, unsigned char __xdata *src );

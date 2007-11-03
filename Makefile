@@ -13,7 +13,7 @@ RSTS      = $(SOURCES:.c=.rst)
 ADBS      = $(SOURCES:.c=.adb)
 PROJECT   = openec
 SOURCES   = main.c fs_entry.c flash.c adc.c battery.c charge_sched.c ds2756.c idle.c \
-            manufacturing.c matrix_3x3.c monitor.c \
+            led.c manufacturing.c matrix_3x3.c monitor.c \
             one_wire.c port_0x6c.c power.c sfr_dump.c sfr_rw.c states.c \
             temperature.c timer.c uart.c unused_irq.c watchdog.c \
             build.c

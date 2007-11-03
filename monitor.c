@@ -38,6 +38,14 @@
 #include "temperature.h"
 #include "uart.h"
 
+#define DEBUG 1
+#if DEBUG && defined(SDCC)
+# include <stdio.h>
+# define PRINTF(...) printf_tiny(__VA_ARGS__)     /* printf is just here for debugging */
+#else
+# define PRINTF(...)
+#endif
+
 typedef enum {monitor_idle, command_m, command_M, command_set, command_error } monitor_state;
 
 static struct
@@ -189,12 +197,17 @@ void monitor()
                     prompt();
                     break;
                 case 'c':
+#if DEBUG && defined(SDCC)
+                    PRINTF( "\r\n%d degC", adc_to_degC( adc_cache[0] ) );
+#else
+
                     putstring( "\r\n0x" );
                     puthex( adc_to_degC( adc_cache[0] ) );
                     putstring( " degC" );
+#endif
                     prompt();
                     break;
-#if 1
+#if DEBUG && defined(SDCC)
                 /* temporarily here: */
                 case 'C':
                     {
@@ -207,8 +220,7 @@ void monitor()
                                 puthex(i);
                                 putchar(':');
                             }
-                            putspace();
-                            puthex( adc_to_degC(i));
+                            PRINTF(" %d", adc_to_degC(i));
                         } while(++i);
                       }
                     break;
@@ -230,6 +242,8 @@ void monitor()
                     m.state = command_m;
                     break;
                 case 'M':
+                    /* this allows to address ANY byte in the flash!
+                       (not only 0x0000..0xffff but 0x00000..0xFffff) */
                     get_next_digit( &m.address_page, 0x00 );
                     m.state = command_M;
                     break;

@@ -24,6 +24,7 @@
 #include <stdbool.h>
 #include "kb3700.h"
 #include "adc.h"
+#include "idle.h"
 #include "power.h"
 #include "watchdog.h"
 #include "timer.h"

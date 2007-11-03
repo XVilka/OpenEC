@@ -104,6 +104,7 @@ bool handle_battery(void)
     } __pdata state = bat_init;
 
     static unsigned char __pdata my_tick;
+    static unsigned char __xdata my_timer = HZ;
 
     /* do not run more than once per tick.
        Note, comparing only the LSB of tick avoids problems
@@ -112,7 +113,7 @@ bool handle_battery(void)
        shorter code) */
     if( my_tick == (unsigned char)tick)
         return 0;
-
+    my_tick = (unsigned char) tick;
 
     switch(state){
 
@@ -122,9 +123,10 @@ bool handle_battery(void)
 
         case bat_get_info:
             if( data_ds2756.serial_number_valid )
-                state = bat_trickle_charge_unknown_battery; // ... xx
+                state = bat_get_info_2; // ... xx
             break;
 
+        case bat_get_info_2:
         case bat_trickle_charge_unknown_battery:
             if( battery.may_charge )
                 state = bat_ramp_up_charge_current;
@@ -223,8 +225,6 @@ bool handle_battery(void)
     /* this is time consuming and needs an sloc */
     battery.charge_mAs += battery.current_mA *
                           ((unsigned char)tick - my_tick) / HZ;
-
-    my_tick = (unsigned char) tick;
 
     /* for debugging */
     STATES_UPDATE(battery, state);

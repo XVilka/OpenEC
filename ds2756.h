@@ -36,46 +36,31 @@
 typedef struct data_ds2756_type{
          unsigned int voltage_raw;
            signed int current_raw;
-         unsigned int charge_raw;
+           signed int charge_raw;
            signed int temp_raw;
            signed int avg_current_raw;
 
          unsigned char serial_number[6];
          unsigned int serial_number_valid:1;
 
-/*
-         unsigned char eeprom_address_from_host;
-         unsigned char eeprom_data_to_or_from_host;
-         unsigned int eeprom_host_has_a_request:1;
-         unsigned int eeprom_request_is_a_write:1;
-         unsigned int eeprom_ec_completed_request:1;
-*/
          struct ow_transfer_type host_transfer;
          struct ow_transfer_type batt_transfer;
 
-         union
-         {
-             // as sent to host?
-             unsigned char c;
-
-             struct
-             {
-                 unsigned int internal_error:1;
-                 unsigned int busy_wait:1;
-                 unsigned int illegal_write:1;
-                 unsigned int crc_fail:1;
-
-                 unsigned int no_device:1;
-                 unsigned int no_device_flag_is_invalid:1;
-                 unsigned int line_stuck:1;
-             };
-         } error;
+         union ow_error_type error;
+         union ow_error_type long_time_error;
        };
 
 extern struct data_ds2756_type __xdata data_ds2756;
 
-
-
-bool handle_ds2756(void);
+bool handle_ds2756_requests(void);
+bool handle_ds2756_readout(void);
 void dump_ds2756(void);
 bool dump_ds2756_all();
+
+int ds2756_raw_I_to_mA(int r);
+int ds2756_raw_Q_to_mAh(int r);
+unsigned int ds2756_raw_U_to_mV(unsigned int r);
+int ds2756_raw_I_to_mA(int r);
+int ds2756_raw_Q_to_mAh(int r);
+unsigned int ds2756_raw_U_to_mV(unsigned int r);
+unsigned int ds2756_raw_T_to_cC(signed int r);

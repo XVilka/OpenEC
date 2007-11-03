@@ -33,11 +33,45 @@
 bool busy;
 
 //! This is kind of "not busy"
-/*! It's value is expected to persevere for more than one 
-    iteration of the main loop. Currently not in use?
+/*! It's value is expected to persevere for more than one
+    iteration of the main loop.
+    Note, "maysleep" might not be checked within the sleep mode
+    (only when entering sleep mode - use "busy" if sleep mode
+    should be exited). Currently not in use?
     \see busy
  */
 bool may_sleep = 1;
+
+
+#if defined(SDCC)
+
+//! Entering low power mode
+/*! IRQs should wake us again, but if they do not tell us
+    to stay awake, then fall asleep again.
+ */
+void sleep_if_allowed( void )
+{
+    __asm
+
+        jnb     _may_sleep, END$; not checked within the loop
+
+    LOOP$:
+        clr     EA              ; disable IRQ to avoid a race condition when checking flags
+        jb      _busy, EXIT$
+        setb    EA              ; enable IRQ again, next instruction is executed anyway
+        orl     PCON, #0x01     ; sleep now, see PMUCFG and CLKCFG
+        sjmp    LOOP$
+
+    EXIT$:
+        setb    EA
+
+    END$:
+
+    __endasm;
+}
+
+
+#else
 
 
 //! Entering low power mode
@@ -63,7 +97,7 @@ void sleep_if_allowed( void )
            clock mentioned for GPT and WDT units.
            Can we use it? */
 
-#ifdef SDCC
+#if defined(SDCC)
         __asm
             nop
         __endasm;
@@ -76,3 +110,6 @@ void sleep_if_allowed( void )
     /* leave with IRQ enabled */
     EA = 1;
 }
+
+
+#endif
