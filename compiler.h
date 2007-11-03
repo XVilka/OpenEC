@@ -21,7 +21,7 @@
   *
   * Header file to overcome 8051 compiler differences for specifying
   * special function registers. The following compilers are supported:
-  * SDCC, Keil, Raisonance, IAR, Hi-Tech, Tasking, Crossware, Wickenh�user.
+  * SDCC, Keil, Raisonance, IAR, Hi-Tech, Tasking, Crossware, Wickenhaeuser.
   * Unfortunately not for use with Dunfield. The compilers are identified by
   * their unique predefined macros. See also:
   * http://predef.sourceforge.net/precomp.html
@@ -147,7 +147,7 @@
 # define SFR32(name, fulladdr)  /* not supported */
 # define SFR32E(name, fulladdr) /* not supported */
 
-/** Wickenh�user
+/** Wickenhaeuser
   * http://www.wickenhaeuser.de
  */
 #elif defined __UC__
