@@ -128,7 +128,7 @@ void ow_transfer_init( unsigned char num_tx, unsigned char num_rx )
     /* preparing IRQ */
     DQ_HIGH();
 
-    SET_TIMER_NEXT_EVENT_US(T_REC_USED);
+    SET_TIMER1_NEXT_EVENT_US(T_REC_USED);
     TIMER1_IRQ_ENABLE();
     TR1 = 1;
 
@@ -246,7 +246,7 @@ void timer1_interrupt(void) __interrupt(3) __using(1)
                 DEBUG_TOGGLE;
 
                 /* note: intentionally no attempt to be quicker in case a 1 was written */
-                SET_TIMER_NEXT_EVENT_US( 49 );
+                SET_TIMER1_NEXT_EVENT_US( 49 );
 
                 /* roll byte - after 8 iterations it is there again */
                 c = (c >> 1) | (c << 7);
@@ -290,7 +290,7 @@ void timer1_interrupt(void) __interrupt(3) __using(1)
                 /* this delay decides how much CPU power is left when
                    one-wire writes are active. And how long IRQ may
                    be disabled. Take care of t(slot),max */
-                SET_TIMER_NEXT_EVENT_US( 20 );  // ooops... this is short!
+                SET_TIMER1_NEXT_EVENT_US( 20 );  // ooops... this is short!
 
                 DQ_HIGH();
             }
@@ -302,7 +302,7 @@ void timer1_interrupt(void) __interrupt(3) __using(1)
 
                 DQ_HIGH();
 
-                SET_TIMER_NEXT_EVENT_US( 2 );
+                SET_TIMER1_NEXT_EVENT_US( 2 );
 
                 c = *transfer_ptr;
                 c >>= 1;
@@ -313,7 +313,7 @@ void timer1_interrupt(void) __interrupt(3) __using(1)
                 /* this delay decides how much CPU power is left when
                    one-wire reads are active. And how long IRQ may
                    be disabled. Take care of t(slot),max */
-                SET_TIMER_NEXT_EVENT_US( 40 );
+                SET_TIMER1_NEXT_EVENT_US( 40 );
 
                 DEBUG_TOGGLE;
 
@@ -375,7 +375,7 @@ void timer1_interrupt(void) __interrupt(3) __using(1)
                 {
                     /* beginning of reset */
                     DQ_LOW();
-                    SET_TIMER_NEXT_EVENT_US( 480 + 1 );
+                    SET_TIMER1_NEXT_EVENT_US( 480 + 1 );
                     transfer_state--;
                 }
                 break;
@@ -396,7 +396,7 @@ void timer1_interrupt(void) __interrupt(3) __using(1)
                 {
                     /* end of reset */
                     DQ_HIGH();
-                    SET_TIMER_NEXT_EVENT_US( 60 + 1 );
+                    SET_TIMER1_NEXT_EVENT_US( 60 + 1 );
                     transfer_state--;
                 }
                 break;
@@ -416,7 +416,7 @@ void timer1_interrupt(void) __interrupt(3) __using(1)
 
                 data_ds2756.error.no_device_flag_is_invalid = 0;
                 /* wait until one-wire device freed the bus again */
-                SET_TIMER_NEXT_EVENT_US( 240 + 1 );
+                SET_TIMER1_NEXT_EVENT_US( 240 + 1 );
                 break;
 
 //                case 0xff: /* dummy case to inhibit jumptable generation,

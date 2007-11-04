@@ -161,6 +161,7 @@ unsigned char _sdcc_external_startup(void)
                              0x80 gives about 30.9 MHz here.
                              0x95 is what ec-dump.fth shows */
 
+    GPIOIE08 |= 0x20;   /**< enable external Reset input */
     // LPC_2EF is marked as internal use only but deviates from reset value
 
     return 0;

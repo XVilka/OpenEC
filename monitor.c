@@ -24,6 +24,9 @@
 
 /*
    It's a hack. Adapt to what you need. Won't be in final firmware anyway:)
+
+   Note, the monitor is implemented as a state-machine, so
+   the main loop can still do its work.
  */
 
 #include <stdbool.h>
@@ -46,7 +49,16 @@
 # define PRINTF(...)
 #endif
 
-typedef enum {monitor_idle, command_m, command_M, command_set, command_error } monitor_state;
+typedef enum 
+{
+    monitor_idle,
+    command_m,
+    command_M,
+    command_set,
+    command_and,
+    command_or,
+    command_error
+} monitor_state;
 
 static struct
 {
@@ -159,20 +171,22 @@ void monitor()
         return;
 
     c = getchar();
-    if( c == '\n' )
+    if( c == '\n' ) /* ignore '\n', we care for '\r' */
         return;
 
     switch( m.state )
     {
-        case 0:
+        case monitor_idle:
             putchar( c );
             switch( c )
             {
-                case '-':
+                case '-': /* decrements address */
                     m.address-=2;
-                case '+':
+                    /* intentionally no break here */
+                case '+': /* increments address */
                     m.address++;
                     putchar('\r');
+                    /* intentionally no break here */
                 case '\r':
                     if( m.digits == 5 )
                         puthex( m.address_page );
@@ -184,19 +198,23 @@ void monitor()
                     dump_address( m.address, (m.digits == 5) ? 2 : (m.digits > 2));
                     prompt();
                     break;
-                case '?':
-                    putstring( "\r\n?bBcdgGmsS+-= see \"" __FILE__ "\"");
+
+                case '?': /* list of commands */
+                    putstring( "\r\n?bBcdgGmrsS+-=&| see \"" __FILE__ "\"");
                     prompt();
                     break;
-                case 'b':
+
+                case 'b': /* battery */
                     dump_ds2756();
                     prompt();
                     break;
-                case 'B':
+
+                case 'B': /* all of battery */
                     dump_ds2756_all();
                     prompt();
                     break;
-                case 'c':
+
+                case 'c': /* temperature of internal sensor */
 #if DEBUG && defined(SDCC)
                     PRINTF( "\r\n%d degC", adc_to_degC( adc_cache[0] ) );
 #else
@@ -208,8 +226,9 @@ void monitor()
                     prompt();
                     break;
 #if DEBUG && defined(SDCC)
+
                 /* temporarily here: */
-                case 'C':
+                case 'C': /* dump temperature conversion */
                     {
                         unsigned char i = 0;
                         do
@@ -225,49 +244,72 @@ void monitor()
                       }
                     break;
 #endif
-                case 'd':
+
+                case 'd': /* 8051 data memory */
                     dump_mcs51();
                     prompt();
                     break;
-                case 'g':
+
+                case 'g': /* kb3700 xdata SFR */
                     dump_xdata_sfr();
                     prompt();
                     break;
-                case 'G':
+
+                case 'G': /* detailled output of GPIO settings */
                     dump_gpio();
                     prompt();
                     break;
-                case 'm':
+
+                case 'm': /* set address */
                     get_next_digit( &m.address, 0x00 );
                     m.state = command_m;
                     break;
-                case 'M':
+
+                case 'M': /* set address of 64k block  */
                     /* this allows to address ANY byte in the flash!
-                       (not only 0x0000..0xffff but 0x00000..0xFffff) */
+                       (not only 0x0000..0xffff but 0x000000..0x0Fffff) */
                     get_next_digit( &m.address_page, 0x00 );
                     m.state = command_M;
                     break;
-                case 's':
+
+                case 'r': /* rebooting */
+                    reboot();
+                    break;
+
+                case 's': /* dump states once */
                     print_states_enable = 1;
                     print_states();
                     print_states_enable = 0;
                     prompt();
                     break;
-                case 'S':
+
+                case 'S': /* toggle continuous output mode for states info */
                     print_states_ruler();
                     print_states_enable = !print_states_enable;
                     prompt();
                     break;
-                case '=':
+
+                case '=': /* set address to value (can access either data, SFR, xdata, or xdata SFR) */
                     get_next_digit( &m.arg, 0x00 );
                     m.state = command_set;
                     break;
+
+                case '|': /* bitwise or to previously set address */
+                    get_next_digit( &m.arg, 0x00 );
+                    m.state = command_or;
+                    break;
+
+                case '&': /* bitwise and to previously set address */
+                    get_next_digit( &m.arg, 0x00 );
+                    m.state = command_and;
+                    break;
+
                 default:
                     m.state = command_error;
             }
             break;
 
-        case command_m:
+        case command_m: /* get memory address (2 or 4 digits) */
             {
                 unsigned char digits;
 
@@ -287,7 +329,7 @@ void monitor()
             break;
 
         // just a hack. Likely will be removed.
-        case command_M:
+        case command_M: /* get single digit for 64k page */
             {
                 unsigned char digits;
 
@@ -302,6 +344,8 @@ void monitor()
             break;
 
         case command_set:
+        case command_and:
+        case command_or:
             {
                 unsigned char digits;
 
@@ -312,15 +356,50 @@ void monitor()
                 {
                     if( digits )
                     {
+                        unsigned char t = (unsigned char)m.arg;
+
                         if( m.digits > 2 )
                         {
-                            *(unsigned char __xdata *)m.address = (unsigned char)m.arg;
+                            switch( m.state )
+                            {
+                                case command_set:
+                                     *(unsigned char __xdata *)m.address = t;
+                                     break;
+                                case command_and:
+                                     EA = 0;
+                                     *(unsigned char __xdata *)m.address &= t;
+                                     EA = 1;
+                                     break;
+                                case command_or:
+                                     EA = 0;
+                                     *(unsigned char __xdata *)m.address |= t;
+                                     EA = 1;
+                                     break;
+                            }
                             gpio_check_IO_direction();
+                            m.state = 0;
+                            prompt();
                         }
                         else
+                        {
                             if( m.address < 0x80 )
                             {
-                                *(unsigned char __data *)m.address = (unsigned char)m.arg;
+                                switch( m.state )
+                                {
+                                    case command_set:
+                                         *(unsigned char __data *)m.address = t;
+                                         break;
+                                    case command_and:
+                                         EA = 0;
+                                         *(unsigned char __data *)m.address &= t;
+                                         EA = 1;
+                                         break;
+                                    case command_or:
+                                         EA = 0;
+                                         *(unsigned char __data *)m.address |= t;
+                                         EA = 1;
+                                         break;
+                                }
                                 m.state = 0;
                                 prompt();
                             }
@@ -329,6 +408,7 @@ void monitor()
                                 /* sorry, no    write_mcs51_sfr() */
                                 m.state = command_error;
                             }
+                        }
                     }
                 }
             }

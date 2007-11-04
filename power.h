@@ -33,3 +33,5 @@ extern bool XO_suspended;
 void power_init(void);
 
 void handle_power(void);
+
+void reboot(void);

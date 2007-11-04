@@ -116,6 +116,66 @@ static struct
 
 bool XO_suspended;
 
+//! Do a full reset by external reset pin
+/*! if this routine returns someone might be tampering the XO and clamps the line?
+ */
+void reboot(void)
+{
+    static const __code unsigned char msg[]= {'r','e','b','o','o','t'};
+
+    EA = 0;
+
+    /* disable external Reset input ECRST# */
+    GPIOIE08 &= ~0x20;
+    /* data to low */
+    GPIOD08  &= ~0x20;
+    /* enable output */
+    GPIOOE08 |= 0x20;
+
+    /* allow output to settle.
+       Output is connected to 1uF condensator and specified
+       for 2..4 mA source/sink current.
+       Needs 1.65ms nominally (and about 200us measured here)
+       Wait a little longer and while at it output a message */
+
+    __asm
+        mov     dptr, #_reboot_msg_1_1
+        mov     r6, #0x00
+        mov     r7, #0x00
+
+    00001$:                     ; inner delay loop
+        djnz    r6, 00001$
+
+        cjne    r7, #6, .+1
+        jnc     00002$
+        mov     a, r7
+        movc    a, @a+dptr      ; loading message
+        clr     TI
+        mov     SBUF, a         ; oops, clearing TI seems needed
+
+    00002$:
+        inc     r7
+        cjne    r7, #18, 00001$ ; outer loop  (18 results in about 10ms)
+
+        mov     dptr, #_GPIOIE08 ; enable external reset input again
+        movx    a, @dptr
+        orl     a, #0x20
+        movx    @dptr, a
+        ;
+        nop
+    __endasm;
+
+    /* Code below should never be executed - or is someone clamping the line???
+       What to do then?
+       Continue as if nothing happened? Let the calling function decide.
+     */
+
+    /* disable ECRST# as output */
+    GPIOOE08 &= ~0x20;
+    EA = 1;
+
+}
+
 #if DIRTY
 
 void power_init(void)
