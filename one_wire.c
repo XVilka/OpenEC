@@ -66,7 +66,7 @@ static volatile unsigned char __pdata transfer_cnt; /* upper nibble for TX, lowe
 #define DQ_IS_LOW    (!DQ_IS_HIGH)
 
 //! us has to be >1
-#define SET_TIMER_NEXT_EVENT_US(us) do                                       \
+#define SET_TIMER1_NEXT_EVENT_US(us) do                                      \
     {                                                                        \
         /* would have expected to /12 instead /24 seems to be ok */          \
         TMR1 = -(unsigned int)((((SYSCLOCK/1000u)/24u)*(us)+500)/1000u);     \

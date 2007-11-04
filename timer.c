@@ -123,11 +123,13 @@ void timer_gpt3_interrupt(void) __interrupt(0x17)
 
         /* handle watchdog. Here? */
         if( watchdog_all_up_and_well == (WATCHDOG_MAIN_LOOP_IS_FINE |
-                                         WATCHDOG_PS2_IS_FINE |
-                                         WATCHDOG_BATTERY_CODE_IS_FINE) )
+                                         WATCHDOG_ONE_WIRE_IS_FINE) )
         {
             /* reset pending flags */
-            WDTPF = 0x03;
+//            WDTPF = 0x03;
+            WDTCFG |= 0x01;
+
+
             /* reset this so subsystems have to report again */
             watchdog_all_up_and_well = 0x00;
         }

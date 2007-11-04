@@ -48,21 +48,32 @@ void watchdog_init(void)
     WDTPF = 0x03;
 
     /* disable watchdog for now */
-    WDTCFG = 0x48;
+    //WDTCFG = 0x48;
+
+    /* enable IRQ and reset WDT */
+    WDTCFG = 0x03;
 
     /* time in units of 64 ms until IRQ occurs. */
-    WDTCNT = 32;
+    WDTCNT = 50;
+
+    /* allow watchdog interrupt */
+    P0IE |= 0x01;
 }
 
 
 
 //! hopefully unused
+/*! This interrupt is _not_ used to calm the watchdog again.
+    Instead, if the IRQ was triggered, it reboots gracefully.
+ */
 void watchdog_interrupt(void) __interrupt(0x08)
 {
     #define WATCHDOG_INTERRUPT_STACK_FOOTPRINT (7)
 
-    /* note that we came here and why we came here.  */
-    STATES_UPDATE(watchdog, watchdog_all_up_and_well | 0x01);
+    EA = 0;
+
+    /* note that we came here and why we came here. */
+    STATES_UPDATE(watchdog, watchdog_all_up_and_well | WATCHDOG_IRQ_OCCURED);
 
     /* note when we came here.
        tick is consistent as WDT IRQ does not interrupt Timer IRQ.
@@ -78,12 +89,27 @@ void watchdog_interrupt(void) __interrupt(0x08)
     }
 
     /* reset pending flag? */
-    P0IF &= ~0x80;
+    P0IF &= ~0x01;
 
     /* disabling WDT interrupt, bad enough we came here once */
-    P0IE &= ~0x80;
+    P0IE &= ~0x01;
 
     /* tell the outside world (LED, Host) */
 
     /* force reboot */
+    __asm
+        ; sending message via UART
+        mov   r2, #0x00
+        djnz  r2, .-1   ; delay for an eventually pending char
+        clr   TI        ; many things may have gone wrong, not polling for TI
+        mov   SBUF, #'W ; dummy comment with trailing '
+        djnz  r2, .-1   ; delay
+        clr   TI
+        mov   SBUF, #'D ; dummy comment with trailing '
+        djnz  r2, .-1   ; delay
+        clr   TI
+        mov   SBUF, #'T ; dummy comment with trailing '
+
+        lcall _reboot   ; note, this reboot also resets the GPIO module
+    __endasm;
 }

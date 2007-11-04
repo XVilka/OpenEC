@@ -61,9 +61,12 @@ void handle_leds(void)
     }
     else
     {
-        if( (!IS_AC_IN_ON  && !LED_PWR_IS_ON)  ||                             /* off if XO is off and no external supply */
-            ((XO_suspended && ((unsigned char)my_tick & 0x7e))) ||            /* in suspend mode mostly off */
-            ((batt_led_colour & 0x80) && ((unsigned char)my_tick & 0x40)) )   /* blinking mode? */
+        if( /* off if XO is off and no external supply */
+            (!IS_AC_IN_ON  && !LED_PWR_IS_ON)  ||
+            /* in suspend mode mostly off */
+            ((XO_suspended && ((unsigned char)my_tick & 0x7e))) ||
+            /* blinking mode? */
+            ((batt_led_colour & 0x80) && ((unsigned char)my_tick & 0x40)) )
         {
             LED_CHG_G_OFF();
             LED_CHG_R_OFF();
