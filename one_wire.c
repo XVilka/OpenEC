@@ -22,6 +22,47 @@
    what you give them.   Help stamp out software-hoarding!
 -------------------------------------------------------------------------*/
 
+/*! \file one_wire.c
+    \image latex ow_reset.png "DQ (CH2) and SPICS# (CH1) during one-wire reset" width=0.8\textwidth
+    \image html  ow_reset.png "DQ (CH2) and SPICS# (CH1) during one-wire reset"
+
+    Trace 2 of the figure shows first the default high level, then low level
+    during reset duration, then high level as the EC releases the bus,
+    then the response from the one-wire device (note the slightly higher 
+    voltage for low level) then the device  releasing the bus again and
+    finally the first bit being written to the device.
+    Trace 1 shows the SPI chip select which shows activity or low level
+    when the EC fetches new instructions.
+
+    \image latex ow_write_bit.png "DQ (CH2) and SPICS# (CH1) during one-wire write" width=0.8\textwidth
+    \image html  ow_write_bit.png "DQ (CH2) and SPICS# (CH1) during one-wire write"
+
+    This figure is split in an upper and a lower half with the lower half
+    being a zoom of the upper one.
+    The upper left quadrant shows the same situation as the previous figure for
+    one-wire reset. In the upper right quadrant the 2nd and 3rd bit are selected
+    in a box which is then shown zoomed below.
+    There is a long and a short and another short low intervall shown (for writing
+    a 0 then a 1 then another 1)
+
+    \image latex ow_read_bit.png "DQ (CH2) and SPI chip select (CH1) during one-wire read" width=0.8\textwidth
+    \image html  ow_read_bit.png "DQ (CH2) and SPI chip select (CH1) during one-wire read"
+
+    This figure uses the same display mode as the previous figure but shows a
+    zoom of a 1 and a 0 bit being read. Like in the first figure (one-wire reset)
+    a slightly higher zero level can be seen when the DS2756 (and not the kb3700)
+    pulls down DQ.
+    The activity on the SPI CS line can be used as an indicator when the
+    low/high bit is sampled by the EC.
+    The high level on SPICS# of about 23us corresponds to the EC being in
+    sleep mode within the main loop.
+    This means that the one-wire routine does not occupy the EC during reading
+    of bits completely and that about 1/3rd of the CPU power is left for other
+    things. For writing bits (previous diagram) only about 1/10th of the CPU
+    power is available (which is nice to have but not sufficient to serve the
+    11520 interrupts per second the UART RX or TX can generate).
+ */
+
 #include <stdbool.h>
 #include "kb3700.h"
 #include "ds2756.h"

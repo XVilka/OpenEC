@@ -22,7 +22,8 @@
    what you give them.   Help stamp out software-hoarding!
 -------------------------------------------------------------------------*/
 
-/* 
+/*! \file ds2756.c
+
    Status: committed "as is".
  */
 

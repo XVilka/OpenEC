@@ -22,7 +22,8 @@
    what you give them.   Help stamp out software-hoarding!
 -------------------------------------------------------------------------*/
 
-/*
+/*! \file charge_sched.c
+
    Background: the proprietary firmware contains a sophisticated battery
    charging algorithm by GoldPeak. This algorithm is intended to be
    patented (according to a post on the openec mailing list 20070803).

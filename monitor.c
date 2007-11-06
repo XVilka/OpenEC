@@ -22,7 +22,7 @@
    what you give them.   Help stamp out software-hoarding!
 -------------------------------------------------------------------------*/
 
-/*
+/*! \file monitor.c
    It's a hack. Adapt to what you need. Won't be in final firmware anyway:)
 
    Note, the monitor is implemented as a state-machine, so

@@ -22,7 +22,7 @@
    what you give them.   Help stamp out software-hoarding!
 -------------------------------------------------------------------------*/
 
-/*
+/*! \file power.c
    see http://wiki.laptop.org/go/Hardware_Power_Domains
    see CS5536 data sheet
    see http://dev.laptop.org/git?p=olpc-2.6;a=blob;f=arch/i386/kernel/olpc-pm.c
@@ -116,8 +116,18 @@ static struct
 
 bool XO_suspended;
 
-//! Do a full reset by external reset pin
+//! Do a full reset via external reset pin
 /*! if this routine returns someone might be tampering the XO and clamps the line?
+
+    \image latex ec_reset.png "EC_RST# (CH1) and TX (CH3) during EC reboot" width=0.8\textwidth
+    \image html  ec_reset.png "EC_RST# (CH1) and TX (CH3) during EC reboot"
+
+    The figure shows the EC_RST# pin and the TX pin on the serial adapter during reboot on a B1.
+    The EC_RST# pin is switched low for 10ms then rises again. The fall time 200us
+    is not consistant with the specified output driver characteristics (page 8/9 of datasheet)
+    and an 1uF external condensator.
+    The lower trace shows the TX of the kb3700 UART, first the characters of the reboot
+    message can be seen then later the bootup message of OpenEC (solid black block).
  */
 void reboot(void)
 {
