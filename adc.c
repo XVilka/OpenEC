@@ -28,7 +28,7 @@
 #include "uart.h"
 
 unsigned char __xdata board_id;
-unsigned char __xdata adc_cache[2];
+unsigned char __xdata adc_cache[4]; /* 3 */
 
 static __bit adc_interrupt_flag_remove_me;
 
@@ -49,9 +49,10 @@ void adc_interrupt(void) __interrupt(0x1f)
 
     d = ADCDAT;
     t = ADCTRL;
-    adc_cache[(t>>2) & 0x01] = d;
-    t = t + 0x04;    /**< switch to next channel */
-    t &= 0x04;       /**< only allow the other channel:) */
+    adc_cache[(t>>2) & 0x03] = d;
+    t = t + 0x04;               /**< switch to next channel */
+    if( t >= (3 * 0x04) )       /**< allow 3 channels */
+        t = 0;
     ADCTRL = t;
 
    /* Reset pending flag */
@@ -64,7 +65,7 @@ void adc_interrupt(void) __interrupt(0x1f)
 void adc_init(void)
 {
     /* enable selected channels */
-    ADDAEN = 0x03;
+    ADDAEN = 0x07;
 
     /* Reset pending flag */
     P3IF &= ~0x80;

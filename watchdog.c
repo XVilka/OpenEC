@@ -23,6 +23,7 @@
 -------------------------------------------------------------------------*/
 #include <stdbool.h>
 #include "kb3700.h"
+#include "reset.h"
 #include "states.h"
 #include "timer.h"
 #include "watchdog.h"
@@ -96,6 +97,7 @@ void watchdog_interrupt(void) __interrupt(0x08)
 
     /* tell the outside world (LED, Host) */
 
+#if defined( SDCC )
     /* force reboot */
     __asm
         ; sending message via UART
@@ -112,4 +114,5 @@ void watchdog_interrupt(void) __interrupt(0x08)
 
         lcall _reboot   ; note, this reboot also resets the GPIO module
     __endasm;
+#endif
 }

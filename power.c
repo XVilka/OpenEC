@@ -39,39 +39,39 @@
 
 /* dangerous! */
 #define ENABLE_OUTPUTS (0)
-#define DIRTY (1)
+#define SIMPLE (1)
 
-#define IS_MAIN_ON    (GPIOD18 & 0x04) /* (B1 about 68mm, 108mm)U13,6  CS5536 WORKING? */
+#define IS_MAIN_ON    (GPIOD18 & 0x04) /* (B1 about 68mm, 108mm)U13,6  CS5536 WORKING? Bidirectional! */
 #define IS_SUS_ON     (GPIOD18 & 0x08) /* (B1 near SD-Card)U33,6  CS5536 WORK_AUX? */
-#define IS_AC_IN_ON   (GPIADIN & 0x04)
 
 
 #define IS_MAIN_ON_AND_SUS_ON ((GPIOD18 & 0x0c) == 0x0c)
 #define IS_MAIN_OFF_AND_SUS_OFF (!(GPIOD18 & 0x0c))
 
-#define SWITCH_MAIN_ON_PU_ON  do{ GPIOPU18 |=  0x04; }while(0)  /* */
-#define SWITCH_MAIN_ON_PU_OFF do{ GPIOPU18 &= ~0x04; }while(0)  /* */
+#define SWITCH_MAIN_ON_PU_ON()  do{ GPIOPU18 |=  0x04; }while(0)  /* pullup */
+#define SWITCH_MAIN_ON_PU_OFF() do{ GPIOPU18 &= ~0x04; }while(0)  /* pullup */
 
-#define SWITCH_ECPWRRQST_ON  do{GPIOED8 |=  0x80;}while(0)  /* GPIOEF (to DCON) */
-#define SWITCH_ECPWRRQST_OFF do{GPIOED8 &= ~0x80;}while(0)
+#define SWITCH_ECPWRRQST_ON()  do{GPIOED8 |=  0x80;}while(0)  /* GPIOEF (to DCON) */
+#define SWITCH_ECPWRRQST_OFF() do{GPIOED8 &= ~0x80;}while(0)
 
-#define SWITCH_PWR_BUT_ON    do{GPIOD08 &= ~0x10;}while(0)  /* GPIO0C# (to CS5536 GPIO28 PWR_BUT#) */
-#define SWITCH_PWR_BUT_OFF   do{GPIOD08 |=  0x10;}while(0)  /* # */
+#define SWITCH_PWR_BUTn_ON()   do{GPIOD08 &= ~0x10;}while(0)  /* GPIO0C# (to CS5536 GPIO28 PWR_BUT#) */
+#define SWITCH_PWR_BUTn_OFF()  do{GPIOD08 |=  0x10;}while(0)  /* # */
 
-#define SWITCH_DCON_EN_ON    do{GPIOED8 |=  0x20;}while(0)  /* GPIOED */
-#define SWITCH_DCON_EN_OFF   do{GPIOED8 &= ~0x20;}while(0)
+#define SWITCH_DCON_EN_ON()    do{GPIOED8 |=  0x20;}while(0)  /* GPIOED */
+#define SWITCH_DCON_EN_OFF()   do{GPIOED8 &= ~0x20;}while(0)
 
-#define SWITCH_WLAN_ON       do{GPIOD00 |=  0x02;}while(0)  /* GPIO01 (B1)U15,6(near WLAN) */
-#define SWITCH_WLAN_OFF      do{GPIOD00 &= ~0x02;}while(0)
+#define SWITCH_WLAN_ON()       do{GPIOD00 |=  0x02;}while(0)  /* GPIO01 (B1)U15,6(near WLAN) */
+#define SWITCH_WLAN_OFF()      do{GPIOD00 &= ~0x02;}while(0)
 
-#define SWITCH_SWI_ON        do{GPIOD00 &= ~0x04;}while(0)  /* GPIO02# */
-#define SWITCH_SWI_OFF       do{GPIOD00 |=  0x04;}while(0)  /* # */
+#define SWITCH_SWIn_ON()       do{GPIOD00 &= ~0x04;}while(0)  /* GPIO02# to CS5536 GPIO25, LOW_BAT#?
+                                                               http://wiki.laptop.org/go/GPIO_Map says its an output(!) of CS5536 */
+#define SWITCH_SWIn_OFF()      do{GPIOD00 |=  0x04;}while(0)  /* # */
 
-#define SWITCH_VR_ON_ON      do{GPIOD00 &= ~0x01;}while(0)  /* GPIO00# Q26 (near CN24 and reset switch) */
-#define SWITCH_VR_ON_OFF     do{GPIOD00 |=  0x01;}while(0)  /* # */
+#define SWITCH_VR_ONn_ON()     do{GPIOD00 &= ~0x01;}while(0)  /* GPIO00# Q26 (near CN24 and reset switch) */
+#define SWITCH_VR_ONn_OFF()    do{GPIOD00 |=  0x01;}while(0)  /* # */
 
-#define SWITCH_USB_PWR_ENn_B1B2_ON   do{}while(0)           /* ToBeDone */
-#define SWITCH_USB_PWR_ENn_B1B2_OFF  do{}while(0)
+#define SWITCH_USB_PWR_ENn_B1B2_ON()   do{}while(0)           /* ToBeDone */
+#define SWITCH_USB_PWR_ENn_B1B2_OFF()  do{}while(0)
 
 #define POWER_BUTTON_PRESSED !(GPIOEIN0 & 0x80)             /* R74 next to SD-Card */
 
@@ -116,77 +116,8 @@ static struct
 
 bool XO_suspended;
 
-//! Do a full reset via external reset pin
-/*! if this routine returns someone might be tampering the XO and clamps the line?
 
-    \image latex ec_reset.png "EC_RST# (CH1) and TX (CH3) during EC reboot" width=0.8\textwidth
-    \image html  ec_reset.png "EC_RST# (CH1) and TX (CH3) during EC reboot"
-
-    The figure shows the EC_RST# pin and the TX pin on the serial adapter during reboot on a B1.
-    The EC_RST# pin is switched low for 10ms then rises again. The fall time 200us
-    is not consistant with the specified output driver characteristics (page 8/9 of datasheet)
-    and an 1uF external condensator.
-    The lower trace shows the TX of the kb3700 UART, first the characters of the reboot
-    message can be seen then later the bootup message of OpenEC (solid black block).
- */
-void reboot(void)
-{
-    static const __code unsigned char msg[]= {'r','e','b','o','o','t'};
-
-    EA = 0;
-
-    /* disable external Reset input ECRST# */
-    GPIOIE08 &= ~0x20;
-    /* data to low */
-    GPIOD08  &= ~0x20;
-    /* enable output */
-    GPIOOE08 |= 0x20;
-
-    /* allow output to settle.
-       Output is connected to 1uF condensator and specified
-       for 2..4 mA source/sink current.
-       Needs 1.65ms nominally (and about 200us measured here)
-       Wait a little longer and while at it output a message */
-
-    __asm
-        mov     dptr, #_reboot_msg_1_1
-        mov     r6, #0x00
-        mov     r7, #0x00
-
-    00001$:                     ; inner delay loop
-        djnz    r6, 00001$
-
-        cjne    r7, #6, .+1
-        jnc     00002$
-        mov     a, r7
-        movc    a, @a+dptr      ; loading message
-        clr     TI
-        mov     SBUF, a         ; oops, clearing TI seems needed
-
-    00002$:
-        inc     r7
-        cjne    r7, #18, 00001$ ; outer loop  (18 results in about 10ms)
-
-        mov     dptr, #_GPIOIE08 ; enable external reset input again
-        movx    a, @dptr
-        orl     a, #0x20
-        movx    @dptr, a
-        ;
-        nop
-    __endasm;
-
-    /* Code below should never be executed - or is someone clamping the line???
-       What to do then?
-       Continue as if nothing happened? Let the calling function decide.
-     */
-
-    /* disable ECRST# as output */
-    GPIOOE08 &= ~0x20;
-    EA = 1;
-
-}
-
-#if DIRTY
+#if SIMPLE
 
 void power_init(void)
 {
@@ -201,12 +132,16 @@ void power_init(void)
 
 
     /*! all outputs to off before enabling them as output */
-    SWITCH_VR_ON_OFF;
-    SWITCH_DCON_EN_OFF;
-    SWITCH_ECPWRRQST_OFF;
-    SWITCH_WLAN_OFF;
-    SWITCH_SWI_ON;
-    SWITCH_PWR_BUT_OFF;
+    SWITCH_VR_ONn_OFF();
+    SWITCH_DCON_EN_OFF();
+    SWITCH_ECPWRRQST_OFF();
+    SWITCH_WLAN_OFF();
+    SWITCH_SWIn_ON();
+    SWITCH_PWR_BUTn_OFF();
+    SWITCH_MAIN_ON_PU_OFF(); /* pullup off */
+
+    /*! WLAN_EN is output. This one is here because the pin is floating on a B1. (remove) */
+    GPIOOE00 |= 0x02;
 
 #if ENABLE_OUTPUTS
 # warning ENABLE_OUTPUTS might be dangerous!
@@ -218,7 +153,7 @@ void power_init(void)
     GPIOOE00 |= 0x03;
 
     /*! PWR_BUT# is output */
-    GPIOOE08 |= 0x10;
+//    GPIOOE08 |= 0x10;
 
 #endif
 
@@ -229,7 +164,7 @@ void power_init(void)
 
 
 //! Switches On/Off power to the various subsystems
-/*! This one is just a HACK to get things going.
+/*! This one is just a HACK to try to get things going.
 
 
     \verbatim
@@ -271,7 +206,7 @@ void handle_power(void)
             if( POWER_BUTTON_PRESSED )
             {
                 power_private.timer++;
-                if( power_private.timer == (unsigned char)(HZ/10) )
+                if( power_private.timer == HZ/10 )
                 {
                     LED_PWR_ON();
                     power_private.state = 1;
@@ -282,26 +217,37 @@ void handle_power(void)
             break;
 
         case 1:
-            SWITCH_WLAN_ON;
-            power_private.timer = 0;
+            SWITCH_WLAN_ON();
             power_private.state = 2;
             break;
 
         case 2:
-            SWITCH_PWR_BUT_OFF;
-            SWITCH_SWI_OFF;
-            SWITCH_VR_ON_ON;
-            SWITCH_MAIN_ON_PU_ON;
-            SWITCH_DCON_EN_ON;
+            /* only proceed if the 1-wire bus is not active.
+               (the Geode and the EC are using the same LPC flash.
+               The Geode fetching would most likely spoil timing
+               of the 1-wire bus)
+             */
+            if( !ow_busy() )
+            {
+                SWITCH_PWR_BUTn_OFF();
+                SWITCH_VR_ONn_ON();
+                SWITCH_SWIn_OFF();
+                SWITCH_MAIN_ON_PU_ON();
+                SWITCH_DCON_EN_ON();
 
-            power_private.timer = 0;
-            power_private.state = 3;
+                power_private.timer = 0;
+                power_private.state = 3;
+            }
             break;
 
         case 3:
-            if( ++power_private.timer == 25 )
+            /* just a timer... should probably check also some "ready" bit? */
+            if( ++power_private.timer == HZ/4 )
             {
-                SWITCH_PWR_BUT_ON;
+                SWITCH_PWR_BUTn_ON();
+
+                // maybe:  SWITCH_MAIN_ON_PU_OFF;
+
                 power_private.timer = 0;
                 power_private.state = 4;
             }
@@ -310,19 +256,30 @@ void handle_power(void)
         case 4:
             if( POWER_BUTTON_PRESSED )
             {
-                SWITCH_DCON_EN_OFF;
-                SWITCH_WLAN_OFF;
-                LED_PWR_OFF();
-                SWITCH_SWI_ON;
-                SWITCH_PWR_BUT_ON;
-                SWITCH_VR_ON_OFF;
-                SWITCH_MAIN_ON_PU_OFF;
+                /* powerdown procedure, maybe see http://dev.laptop.org/ticket/218 */
+                SWITCH_PWR_BUTn_ON();
+                SWITCH_MAIN_ON_PU_OFF();
                 power_private.timer = 0;
                 power_private.state = 5;
             }
             break;
 
         case 5:
+            if(  /* wait for Southbridge to turn these off */
+                 IS_MAIN_OFF_AND_SUS_OFF ||
+                 /* but do not wait forever */
+                 (++power_private.timer == HZ/10)  )
+            {
+                SWITCH_VR_ONn_OFF();
+                SWITCH_SWIn_ON();
+                SWITCH_DCON_EN_OFF();
+                SWITCH_WLAN_OFF();
+                LED_PWR_OFF();
+                power_private.state = 6;
+            }
+            break;
+
+        case 6:
             if( !POWER_BUTTON_PRESSED )
             {
                 power_private.timer = 0;
@@ -354,7 +311,10 @@ void handle_power(void)
 
 
 
-
+//! this was the first try with some more states
+/*! but as it did not do the expected, I tried the
+    simpler version above.
+ */
 void power_init(void)
 {
     /*! POWER_BUTTON# is input */
@@ -368,12 +328,12 @@ void power_init(void)
 
 
     /*! all outputs to off before enabling them as output */
-    SWITCH_VR_ON_OFF;
-    SWITCH_DCON_EN_OFF;
-    SWITCH_ECPWRRQST_OFF;
-    SWITCH_WLAN_OFF;
-    SWITCH_SWI_OFF;
-    SWITCH_PWR_BUT_OFF;
+    SWITCH_VR_ONn_OFF();
+    SWITCH_DCON_EN_OFF();
+    SWITCH_ECPWRRQST_OFF();
+    SWITCH_WLAN_OFF();
+    SWITCH_SWIn_OFF();
+    SWITCH_PWR_BUTn_OFF();
 
 #if ENABLE_OUTPUTS
 # warning ENABLE_OUTPUTS might be dangerous!
@@ -420,7 +380,7 @@ void handle_power(void)
                 power_private.timer++;
                 if( power_private.timer == (unsigned char)(HZ/10) )
                 {
-                    LED_PWR_ON;
+                    LED_PWR_ON();
                     power_private.state = WAIT_FOR_POWER_BUTTON_RELEASE;
                 }
             }
@@ -446,7 +406,7 @@ void handle_power(void)
             {
                 if( ++power_private.timer == (unsigned char)HZ )
                 {
-                    LED_PWR_OFF;
+                    LED_PWR_OFF();
                     power_private.state = XO_POWER_BUTTON_TOO_LONG_FOR_POWER_ON;
                 }
             }
@@ -466,9 +426,9 @@ void handle_power(void)
 
         case XO_SWITCH_ON_FROM_WAKEUP:
         case XO_SWITCH_ON_1:
-            LED_PWR_ON;
-            SWITCH_VR_ON_ON;
-SWITCH_DCON_EN_ON;
+            LED_PWR_ON();
+            SWITCH_VR_ONn_ON();
+SWITCH_DCON_EN_ON();
 
             power_private.timer = 0;
             power_private.state = XO_SWITCH_ON_2;
@@ -487,7 +447,7 @@ SWITCH_DCON_EN_ON;
             break;
 
         case XO_SWITCH_ON_3:
-            SWITCH_DCON_EN_ON;
+            SWITCH_DCON_EN_ON();
             power_private.state = XO_SWITCH_ON_4;
             break;
 
@@ -496,7 +456,7 @@ SWITCH_DCON_EN_ON;
             break;
 
         case XO_SWITCH_ON_5:
-            SWITCH_WLAN_ON;             /**< currently done here */
+            SWITCH_WLAN_ON();             /**< currently done here */
             power_private.state = XO_RUNNING;
             break;
 
@@ -515,7 +475,7 @@ SWITCH_DCON_EN_ON;
         case XO_IS_IT_SUSPEND:
             if( !POWER_BUTTON_PRESSED )
             {
-                SWITCH_PWR_BUT_OFF;
+                SWITCH_PWR_BUTn_OFF();
                 power_private.state = XO_SWITCH_TO_SUSPEND;
             }
             else
@@ -526,7 +486,7 @@ SWITCH_DCON_EN_ON;
                     power_private.state = XO_SWITCH_OFF_FROM_RUNNING;
                     power_private.timer = 0;
                     /* also tell the host, how? */
-                    SWITCH_PWR_BUT_ON; /**< needs to be "pressed" for >=62 us (unfiltered) */
+                    SWITCH_PWR_BUTn_ON(); /**< needs to be "pressed" for >=62 us (unfiltered) */
                 }
             }
             break;
@@ -565,9 +525,9 @@ SWITCH_DCON_EN_ON;
                 else 
                 {
                     if( ((unsigned char)tick & 0x7e) == 0x00 )
-                        LED_PWR_ON;
+                        LED_PWR_ON();
                     else
-                        LED_PWR_OFF;
+                        LED_PWR_OFF();
                 }
             }
             break;
@@ -582,7 +542,7 @@ SWITCH_DCON_EN_ON;
             {
                 if( ++power_private.timer == (unsigned char)HZ )
                 {
-                    LED_PWR_OFF;
+                    LED_PWR_OFF();
                     power_private.state = XO_SWITCH_OFF_FROM_SUSPEND;
                     power_private.timer = 0;
                 }
@@ -596,7 +556,7 @@ SWITCH_DCON_EN_ON;
             else
             {
                 power_private.timer++;
-                LED_PWR_ON;
+                LED_PWR_ON();
             }
             break;
 
@@ -618,14 +578,14 @@ SWITCH_DCON_EN_ON;
         case XO_SWITCH_OFF_2:
         case XO_EMERGENCY_OFF:
         case XO_MAIN_OR_SUS_ERROR:
-            SWITCH_DCON_EN_OFF;
-            SWITCH_WLAN_OFF; /* ... */
-            SWITCH_VR_ON_OFF;
- // SWITCH_PWR_BUT_OFF;
+            SWITCH_DCON_EN_OFF();
+            SWITCH_WLAN_OFF(); /* ... */
+            SWITCH_VR_ONn_OFF();
+// SWITCH_PWR_BUT_OFF;
 // SWITCH_ECPWRRQST_OFF;
 // SWITCH_SWI_OFF;
 
-            LED_PWR_OFF;
+            LED_PWR_OFF();
             power_private.state = XO_OFF;
             break;
     }

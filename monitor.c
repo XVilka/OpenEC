@@ -35,6 +35,7 @@
 #include "adc.h"
 #include "ds2756.h"
 #include "flash.h"
+#include "reset.h"
 #include "sfr_rw.h"
 #include "sfr_dump.h"
 #include "states.h"
@@ -200,7 +201,7 @@ void monitor()
                     break;
 
                 case '?': /* list of commands */
-                    putstring( "\r\n?bBcdgGmrsS+-=&| see \"" __FILE__ "\"");
+                    putstring( "\r\n?bBcdgGmrsSw+-=&| see \"" __FILE__ "\"");
                     prompt();
                     break;
 
@@ -287,6 +288,12 @@ void monitor()
                     print_states_ruler();
                     print_states_enable = !print_states_enable;
                     prompt();
+                    break;
+
+                case 'w': /* watchdog reboot */
+                    putstring("\r\nWatchdog bites?");
+                    while (1)
+                        ;
                     break;
 
                 case '=': /* set address to value (can access either data, SFR, xdata, or xdata SFR) */

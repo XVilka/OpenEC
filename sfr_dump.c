@@ -30,6 +30,7 @@
 
 #include <stdbool.h>
 #include "kb3700.h"
+#include "adc.h"
 #include "uart.h"
 #include "sfr_rw.h"
 
@@ -157,15 +158,10 @@ void dump_mcs51( void )
         if( (i & 0x07) == 0)
         {
             putstring( i & 0x80 ? 
-                       "\r\nSFR " : 
+                       "\r\nSFR " :
                        "\r\nDATA " );
             puthex( i );
             putchar(':');
-        }
-        else
-        {
-            if( (i & 0x03) == 0)
-                putspace();
         }
         putspace();
 #if defined(SDCC)
@@ -197,7 +193,7 @@ void dump_xdata_sfr( void )
         putchar(':');
         for( k=0; k<ec_range[i].len; k++ )
         {
-            if( (k & 0x03) == 0)
+            if( k && !(k % 8))
                 putspace();
             putspace();
 #if defined(SDCC)
@@ -220,7 +216,7 @@ void dump_gpio( void )
 {
     unsigned char i,k;
 
-    putstring( "\r\nName  Pin  EC_name           I/O alt_input/alt_output" );
+    putstring( "\r\nName  Pin  EC_name           I/O/P/D alt_input/alt_output" );
 
     for( i=0; i != sizeof ec_gpio / sizeof ec_gpio[0]; i++ )
     {
@@ -260,6 +256,20 @@ void dump_gpio( void )
             putchar( '-' );
         putspace();
 
+        /* pullup enable? */
+        if( get_bit( &GPIOPU00, i ) )
+            putchar( '1' );
+        else
+            putchar( '-');
+        putspace();
+
+        /* open drain enable? */
+        if( get_bit( &GPIOOD00, i ) && (i<0x20) )
+            putchar( '1' );
+        else
+            putchar( '-');
+        putspace();
+
         if( i<0x20 )
         {
             k = get_bit( &GPIOIE00, i );
@@ -272,6 +282,9 @@ void dump_gpio( void )
             putstring( ec_gpio[i].alt_out_name );
             putchar( k ? ' ' : ')' );
         }
+
+        if( i>=0x30 && i<=0x32 )
+            puthex( adc_cache[ i&0x07] );
     }
 }
 

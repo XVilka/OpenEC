@@ -1,5 +1,5 @@
 /*-------------------------------------------------------------------------
-   adc.h - handle the ADC on the EC
+   reset.h - reset the EC
 
    Copyright (C) 2007  Frieder Ferlemann <Frieder.Ferlemann AT web.de>
 
@@ -22,15 +22,4 @@
    what you give them.   Help stamp out software-hoarding!
 -------------------------------------------------------------------------*/
 
-#define ADC_START_CONVERSION do{ ADCTRL |= 0x01; } while(0)
-
-extern unsigned char __xdata adc_cache[4];
-extern unsigned char __xdata board_id;
-
-void adc_interrupt(void) __interrupt(0x1f);
-
-void adc_init(void);
-
-void get_board_id(void);
-
-unsigned char __code * board_id_to_string(void);
+void reboot(void);

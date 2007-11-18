@@ -24,6 +24,7 @@
 
 #include <stdbool.h>
 #include "kb3700.h"
+#include "ds2756.h"
 #include "led.h"
 #include "power.h"
 #include "timer.h"
@@ -63,8 +64,15 @@ void handle_leds(void)
     {
         if( /* off if XO is off and no external supply */
             (!IS_AC_IN_ON  && !LED_PWR_IS_ON)  ||
+
+            /* no battery no light?) (eventually remove this (and the
+               include "ds2756.h") in this file
+               and set batt_led_colour to off elsewhere) */
+             data_ds2756.error.no_device ||
+
             /* in suspend mode mostly off */
             ((XO_suspended && ((unsigned char)my_tick & 0x7e))) ||
+
             /* blinking mode? */
             ((batt_led_colour & 0x80) && ((unsigned char)my_tick & 0x40)) )
         {
