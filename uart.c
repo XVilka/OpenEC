@@ -104,7 +104,7 @@ void uart_init()
 #elif !BITBANG && defined (SDCC)
 
 static volatile unsigned char __pdata tx_buffer[64];
-static volatile unsigned char __pdata rx_buffer[16];
+static volatile unsigned char __pdata rx_buffer[32];
 
 static volatile unsigned char __pdata rx_head;
 static          unsigned char __pdata rx_tail;
