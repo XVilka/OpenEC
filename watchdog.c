@@ -84,9 +84,16 @@ void watchdog_interrupt(void) __interrupt(0x08)
     /* note where we came from. Reads the return address from stack.
      */
     {
-        /* off-by-one error? */
-        unsigned char p = SP - WATCHDOG_INTERRUPT_STACK_FOOTPRINT;
-        states.watchdog_pc = *(unsigned int __idata *) p;
+        unsigned char p = SP - WATCHDOG_INTERRUPT_STACK_FOOTPRINT - 1;
+        
+        /* note, this information survives a reboot! 
+           \see states.c and \see old_states for details.
+           This means that in case of a watchdog reboot
+           the program counter where the watchdog event 
+           happened is known. And the corresponding line of
+           the C-source can be found by looking into 
+           the .rst (relocated lst) files. */
+        states.watchdog_programcounter = *(unsigned int __idata *) p;
     }
 
     /* reset pending flag? */
