@@ -48,7 +48,7 @@ typedef struct states_type {
      unsigned char keyboard;
      unsigned char touchpad;
      unsigned char watchdog;
-     unsigned int watchdog_pc;
+     unsigned int watchdog_programcounter;
      unsigned char charge_sched;
 };
 
