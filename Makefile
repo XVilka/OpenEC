@@ -2,8 +2,8 @@ CC        = sdcc
 DOC       = doxygen
 SREC_CAT  = srec_cat
 D52       = d52
-CFLAGS    = --main-return
-LFLAGS    = --xram-loc 0xf400 --xram-size 2048 --iram-size 128 --code-size 0xf400
+CFLAGS    = --main-return --debug
+LFLAGS    = --xram-loc 0xf400 --xram-size 2048 --iram-size 128 --code-size 0xf400 --debug
 OBJS      = $(SOURCES:.c=.o)
 LSTS      = $(SOURCES:.c=.lst)
 RELS      = $(SOURCES:.c=.rel)
