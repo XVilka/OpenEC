@@ -71,23 +71,27 @@ static struct
 } __pdata m;
 
 
-static void dump_address( unsigned int address, unsigned char area )
+static unsigned char dump_address( unsigned int address, unsigned char area )
 {
+    unsigned char c = 0xff;
+
     switch( area )
     {
         case 0: /* idata/SFR */
             if( (unsigned char)address < 0x80 )
-                puthex( *(unsigned char __idata *)address );
+                c = *(unsigned char __idata *)address;
             else
-                puthex( read_mcs51_sfr( (unsigned char)address ) );
+                c = read_mcs51_sfr( (unsigned char)address );
             break;
         case 1: /* xdata/code */
-            puthex( *(unsigned char __xdata *)address );
+            c = *(unsigned char __xdata *)address;
             break;
         case 2: /* code (anywhere in the SPI flash) */
-            puthex( flash_read_byte(m.address_page, m.address) );
+            c = flash_read_byte(m.address_page, m.address);
             break;
     }
+    puthex( c );
+    return c;
 }
 
 
@@ -196,12 +200,20 @@ void monitor()
                     else
                         puthex( (unsigned char)m.address );
                     putstring( ": " );
-                    dump_address( m.address, (m.digits == 5) ? 2 : (m.digits > 2));
+                    {
+                        unsigned char d;
+                        d = dump_address( m.address, (m.digits == 5) ? 2 : (m.digits > 2) );
+                        if( d >= ' ' && d <= 0x7e )
+                        {
+                            putspace();
+                            putchar( d );
+                        }
+                    }
                     prompt();
                     break;
 
                 case '?': /* list of commands */
-                    putstring( "\r\n?bBcdgGmrsSw+-=&| see \"" __FILE__ "\"");
+                    putstring( "\r\n?bBcdgGmMrsSw+-=&| see \"" __FILE__ "\"");
                     prompt();
                     break;
 
