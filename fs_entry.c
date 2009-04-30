@@ -20,6 +20,16 @@
    In other words, you are welcome to use, share and improve this program.
    You are forbidden to forbid anyone else to use, share and improve
    what you give them.   Help stamp out software-hoarding!
+
+   As a special exception, you may use this file as part of a free software
+   library for the XO of the One Laptop per Child project without restriction.
+   Specifically, if other files instantiate
+   templates or use macros or inline functions from this file, or you compile
+   this file and link it with other files to produce an executable, this
+   file does not by itself cause the resulting executable to be covered by
+   the GNU General Public License.  This exception does not however
+   invalidate any other reasons why the executable file might be covered by
+   the GNU General Public License.
 -------------------------------------------------------------------------*/
 
 #if defined(SDCC)
