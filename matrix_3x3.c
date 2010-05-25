@@ -32,7 +32,7 @@
    the GNU General Public License.
 -------------------------------------------------------------------------*/
 #include <stdbool.h>
-#include "kb3700.h"
+#include "chip.h"
 #include "states.h"
 #include "timer.h"
 #include "matrix_3x3.h"

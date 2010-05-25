@@ -101,13 +101,12 @@
  */
 
 #include <stdbool.h>
-#include "kb3700.h"
+#include "chip.h"
 #include "adc.h"
 #include "battery.h"
 #include "build.h"
 #include "charge_sched.h"
 #include "one_wire.h"
-#include "ds2756.h"
 #include "idle.h"
 #include "led.h"
 #include "matrix_3x3.h"

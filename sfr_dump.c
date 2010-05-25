@@ -39,7 +39,7 @@
 
 
 #include <stdbool.h>
-#include "kb3700.h"
+#include "chip.h"
 #include "adc.h"
 #include "uart.h"
 #include "sfr_rw.h"

@@ -38,9 +38,8 @@
    http://dev.laptop.org/git.do?p=olpc-2.6;a=tree;f=drivers/power
  */
 #include <stdbool.h>
+#include "chip.h"
 #include "battery.h"
-#include "ds2756.h"
-#include "kb3700.h"
 #include "one_wire.h"
 #include "timer.h"
 #include "states.h"

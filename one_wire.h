@@ -25,7 +25,6 @@
 #define ONE_WIRE_H
 
 #include <stdbool.h>
-#include "kb3700.h"
 
 #define GPIOEOE0_ATOMIC(x) do{TIMER1_IRQ_DISABLE();{ x };TIMER1_IRQ_ENABLE();}while(0)
 

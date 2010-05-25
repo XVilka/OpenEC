@@ -24,7 +24,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include "kb3700.h"
+#include "chip.h"
 
 typedef struct
 {

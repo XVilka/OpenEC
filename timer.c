@@ -32,7 +32,7 @@
    the GNU General Public License.
 -------------------------------------------------------------------------*/
 #include <stdbool.h>
-#include "kb3700.h"
+#include "chip.h"
 #include "adc.h"
 #include "idle.h"
 #include "power.h"

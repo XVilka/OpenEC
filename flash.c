@@ -33,7 +33,7 @@
 -------------------------------------------------------------------------*/
 
 #include <stdbool.h>
-#include "kb3700.h"
+#include "chip.h"
 #include "flash.h"
 
 //! uses paged memory access to read a location anywhere in the SPI flash

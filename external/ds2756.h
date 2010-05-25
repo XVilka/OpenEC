@@ -1,5 +1,5 @@
 /*-------------------------------------------------------------------------
-   unused_irq.c - safe IRQ stubs for unused IRQ
+   ds2756.h - handle Maxim/Dallas DS2756
 
    Copyright (C) 2007  Frieder Ferlemann <Frieder.Ferlemann AT web.de>
 
@@ -20,25 +20,46 @@
    In other words, you are welcome to use, share and improve this program.
    You are forbidden to forbid anyone else to use, share and improve
    what you give them.   Help stamp out software-hoarding!
-
-   As a special exception, you may use this file as part of a free software
-   library for the XO of the One Laptop per Child project without restriction.
-   Specifically, if other files instantiate
-   templates or use macros or inline functions from this file, or you compile
-   this file and link it with other files to produce an executable, this
-   file does not by itself cause the resulting executable to be covered by
-   the GNU General Public License.  This exception does not however
-   invalidate any other reasons why the executable file might be covered by
-   the GNU General Public License.
 -------------------------------------------------------------------------*/
 
-#include "compiler.h"
-#include "chip.h"
+/*
+   Status: committed "as is".
+ */
 
-//! if this macro is defined unused_irq.h will generate the functions
-/*! (and not only the prototypes) */
-#define UNUSED_IRQ_GENERATE_FUNCTIONS
 
-#include "unused_irq.h"
+#include <stdbool.h>
+#include "one_wire.h"
 
-unsigned char __xdata spurious_irq[4];
+//! data from battery sensor
+/*! adapt to Maxim/Dallas DS2756 */
+typedef struct data_ds2756_type{
+         unsigned int voltage_raw;
+           signed int current_raw;
+           signed int charge_raw;
+           signed int temp_raw;
+           signed int avg_current_raw;
+
+         unsigned char serial_number[6];
+         unsigned int serial_number_valid:1;
+
+         struct ow_transfer_type host_transfer;
+         struct ow_transfer_type batt_transfer;
+
+         union ow_error_type error;
+         union ow_error_type long_time_error;
+       };
+
+extern struct data_ds2756_type __xdata data_ds2756;
+
+bool handle_ds2756_requests(void);
+bool handle_ds2756_readout(void);
+void dump_ds2756(void);
+bool dump_ds2756_all();
+
+int ds2756_raw_I_to_mA(int r);
+int ds2756_raw_Q_to_mAh(int r);
+unsigned int ds2756_raw_U_to_mV(unsigned int r);
+int ds2756_raw_I_to_mA(int r);
+int ds2756_raw_Q_to_mAh(int r);
+unsigned int ds2756_raw_U_to_mV(unsigned int r);
+unsigned int ds2756_raw_T_to_cC(signed int r);

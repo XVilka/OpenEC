@@ -74,8 +74,7 @@
  */
 
 #include <stdbool.h>
-#include "kb3700.h"
-#include "ds2756.h"
+#include "chip.h"
 #include "idle.h"
 #include "one_wire.h"
 #include "states.h"

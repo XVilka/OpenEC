@@ -33,7 +33,7 @@
 -------------------------------------------------------------------------*/
 
 #include <stdbool.h>
-#include "kb3700.h"
+#include "chip.h"
 #include "states.h"
 #include "matrix_3x3.h"
 #include "uart.h"

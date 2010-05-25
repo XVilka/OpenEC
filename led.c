@@ -33,8 +33,7 @@
 -------------------------------------------------------------------------*/
 
 #include <stdbool.h>
-#include "kb3700.h"
-#include "ds2756.h"
+#include "chip.h"
 #include "led.h"
 #include "power.h"
 #include "timer.h"

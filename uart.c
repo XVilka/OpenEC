@@ -33,7 +33,7 @@
 -------------------------------------------------------------------------*/
 
 #include <stdbool.h>
-#include "kb3700.h"
+#include "chip.h"
 #include "idle.h"
 #include "timer.h"
 #include "uart.h"

@@ -69,7 +69,7 @@
  */
 
 
-#include "kb3700.h"                             /* adapt license there too */
+#include "chip.h"                             /* adapt license there too */
 
 
 #define RUNNING_FROM_BATTERY (0)                /**< fix */

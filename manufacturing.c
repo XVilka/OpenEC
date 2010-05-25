@@ -38,7 +38,7 @@
 
 #include <stdbool.h>
 #include <ctype.h>
-#include "kb3700.h"
+#include "chip.h"
 #include "flash.h"
 #include "manufacturing.h"
 #include "uart.h"

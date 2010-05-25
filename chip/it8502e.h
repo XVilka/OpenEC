@@ -1,7 +1,7 @@
 /*-------------------------------------------------------------------------
-   uart.h - handle serial IO on the EC
+   it8502e.h - header file for IT8502E/F Embedded Controler
 
-   Copyright (C) 2007  
+   Copyright (C) 2010  Anton Kochkov < anton dot kochkov at gmail dot com >
 
    This program is free software; you can redistribute it and/or modify it
    under the terms of the GNU General Public License as published by the
@@ -22,20 +22,19 @@
    what you give them.   Help stamp out software-hoarding!
 -------------------------------------------------------------------------*/
 
-#include <stdbool.h>
-#include "chip.h"
+#ifndef _IT8502E_H
+#define	_IT8502E_H
 
-void putchar(unsigned char c);
-char getchar();
-bool char_avail( void );
-void tx_drain( void );
+#ifdef	__cplusplus
+extern "C" {
+#endif
 
-void uart_init();
 
-void puthex(unsigned char c);
-void puthex_u16(unsigned int i);
-void putspace();
-void putcrlf();
-unsigned char putstring(unsigned char __code *p);
 
-void uart_interrupt(void) __interrupt(4);
+
+#ifdef	__cplusplus
+}
+#endif
+
+#endif	/* _IT8502E_H */
+

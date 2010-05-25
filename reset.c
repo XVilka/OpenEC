@@ -33,7 +33,7 @@
 -------------------------------------------------------------------------*/
 
 #include <stdbool.h>
-#include "kb3700.h"
+#include "chip.h"
 
 #if defined(SDCC)
 

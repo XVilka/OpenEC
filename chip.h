@@ -1,7 +1,7 @@
 /*-------------------------------------------------------------------------
-   uart.h - handle serial IO on the EC
+   chip.h - header file for all Embedded Controlers
 
-   Copyright (C) 2007  
+   Copyright (C) 2010  Anton Kochkov < anton dot kochkov at gmail dot com >
 
    This program is free software; you can redistribute it and/or modify it
    under the terms of the GNU General Public License as published by the
@@ -22,20 +22,30 @@
    what you give them.   Help stamp out software-hoarding!
 -------------------------------------------------------------------------*/
 
-#include <stdbool.h>
-#include "chip.h"
+#ifndef _CHIP_H
+#define	_CHIP_H
 
-void putchar(unsigned char c);
-char getchar();
-bool char_avail( void );
-void tx_drain( void );
+#include "compiler.h"
 
-void uart_init();
+/* EC chips definitions */
 
-void puthex(unsigned char c);
-void puthex_u16(unsigned int i);
-void putspace();
-void putcrlf();
-unsigned char putstring(unsigned char __code *p);
+#include "chip/kb3700.h"
+#include "chip/it8502e.h"
 
-void uart_interrupt(void) __interrupt(4);
+/* External chips definitions */
+
+#include "external/ds2756.h"
+
+#ifdef	__cplusplus
+extern "C" {
+#endif
+
+
+
+
+#ifdef	__cplusplus
+}
+#endif
+
+#endif	/* _CHIP_H */
+

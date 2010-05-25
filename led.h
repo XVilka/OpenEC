@@ -22,7 +22,7 @@
    what you give them.   Help stamp out software-hoarding!
 -------------------------------------------------------------------------*/
 #include "compiler.h"
-#include "kb3700.h"
+#include "chip.h"
 
 //! low level defines for LED colour
 #define LED_CHG_G_OFF() do{GPIOED0 |=  0x08;}while(0)

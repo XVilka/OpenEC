@@ -37,9 +37,8 @@
  */
 
 #include <stdbool.h>
-#include "kb3700.h"
+#include "chip.h"
 #include "battery.h"
-#include "ds2756.h"
 #include "matrix_3x3.h"
 #include "port_0x6c.h"
 #include "states.h"

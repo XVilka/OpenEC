@@ -33,7 +33,7 @@
 -------------------------------------------------------------------------*/
 
 #include <stdbool.h>
-#include "kb3700.h"
+#include "chip.h"
 #include "idle.h"
 
 //! This is set by an interrupt routine or a state machine

@@ -41,9 +41,8 @@
 
 #include <stdbool.h>
 #include <ctype.h>
-#include "kb3700.h"
+#include "chip.h"
 #include "adc.h"
-#include "ds2756.h"
 #include "flash.h"
 #include "reset.h"
 #include "sfr_rw.h"
